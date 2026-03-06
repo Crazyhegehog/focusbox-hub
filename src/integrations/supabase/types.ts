@@ -80,6 +80,30 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_history: {
         Row: {
           change_amount: number
@@ -184,6 +208,69 @@ export type Database = {
           description?: string | null
           id?: string
           title?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_name: string
+          id: string
+          phone_size: string
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          id?: string
+          phone_size?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string
+          id?: string
+          phone_size?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      partners: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          last_post_date: string | null
+          name: string
+          signed_date: string | null
+          status: Database["public"]["Enums"]["partner_status"]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          last_post_date?: string | null
+          name?: string
+          signed_date?: string | null
+          status?: Database["public"]["Enums"]["partner_status"]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          last_post_date?: string | null
+          name?: string
+          signed_date?: string | null
+          status?: Database["public"]["Enums"]["partner_status"]
         }
         Relationships: []
       }
@@ -352,6 +439,82 @@ export type Database = {
           },
         ]
       }
+      todo_participants: {
+        Row: {
+          accepted: boolean
+          accepted_at: string | null
+          id: string
+          todo_id: string
+          user_id: string
+        }
+        Insert: {
+          accepted?: boolean
+          accepted_at?: string | null
+          id?: string
+          todo_id: string
+          user_id: string
+        }
+        Update: {
+          accepted?: boolean
+          accepted_at?: string | null
+          id?: string
+          todo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todo_participants_todo_id_fkey"
+            columns: ["todo_id"]
+            isOneToOne: false
+            referencedRelation: "todos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      todos: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          responsible_id: string | null
+          status: Database["public"]["Enums"]["todo_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          responsible_id?: string | null
+          status?: Database["public"]["Enums"]["todo_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          responsible_id?: string | null
+          status?: Database["public"]["Enums"]["todo_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todos_responsible_id_fkey"
+            columns: ["responsible_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -386,8 +549,11 @@ export type Database = {
     Enums: {
       app_role: "admin" | "manager" | "member"
       fulfillment_status: "not_started" | "preparing" | "shipped" | "delivered"
+      order_status: "pending" | "packaged" | "sent"
+      partner_status: "discussion" | "no_answer" | "sent_contract" | "signed"
       task_priority: "high" | "medium" | "low"
       task_status: "not_started" | "in_progress" | "completed"
+      todo_status: "not_started" | "in_progress" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -517,8 +683,11 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "manager", "member"],
       fulfillment_status: ["not_started", "preparing", "shipped", "delivered"],
+      order_status: ["pending", "packaged", "sent"],
+      partner_status: ["discussion", "no_answer", "sent_contract", "signed"],
       task_priority: ["high", "medium", "low"],
       task_status: ["not_started", "in_progress", "completed"],
+      todo_status: ["not_started", "in_progress", "completed"],
     },
   },
 } as const
