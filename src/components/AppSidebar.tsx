@@ -1,12 +1,15 @@
 import {
-  LayoutDashboard,
+  Package,
+  ClipboardList,
+  Boxes,
+  Users,
+  Mail,
+  FileText,
+  ScrollText,
   CheckSquare,
   CalendarDays,
-  Package,
-  ShoppingCart,
-  Users,
-  Settings,
   LogOut,
+  ChevronDown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -25,18 +28,32 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const mainNav = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Tasks", url: "/tasks", icon: CheckSquare },
-  { title: "Calendar", url: "/calendar", icon: CalendarDays },
-  { title: "Inventory", url: "/inventory", icon: Package },
-  { title: "Orders", url: "/orders", icon: ShoppingCart },
-];
-
-const secondaryNav = [
-  { title: "Team", url: "/team", icon: Users },
-  { title: "Settings", url: "/settings", icon: Settings },
+const sections = [
+  {
+    title: "Packages / Inventory",
+    items: [
+      { title: "Orders", url: "/orders", icon: ClipboardList },
+      { title: "Inventory Tracking", url: "/inventory-tracking", icon: Boxes },
+    ],
+  },
+  {
+    title: "Partners",
+    items: [
+      { title: "Partner List", url: "/partners", icon: Users },
+      { title: "Email Templates", url: "/email-templates", icon: Mail },
+      { title: "Partner Brief", url: "/partner-brief", icon: FileText },
+      { title: "Partner Contract", url: "/partner-contract", icon: ScrollText },
+    ],
+  },
+  {
+    title: "Team",
+    items: [
+      { title: "Todos", url: "/todos", icon: CheckSquare },
+      { title: "Calendar", url: "/calendar", icon: CalendarDays },
+    ],
+  },
 ];
 
 export function AppSidebar() {
@@ -45,16 +62,10 @@ export function AppSidebar() {
   const location = useLocation();
   const { profile, signOut } = useAuth();
 
-  const isActive = (path: string) =>
-    path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+  const isActive = (path: string) => location.pathname === path;
 
   const initials = profile?.full_name
-    ? profile.full_name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
+    ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "U";
 
   return (
@@ -78,62 +89,45 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-wider">
-            Main
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-wider">
-            Manage
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {secondaryNav.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                  >
-                    <NavLink
-                      to={item.url}
-                      className="hover:bg-sidebar-accent"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {sections.map((section) => {
+          const sectionActive = section.items.some((i) => isActive(i.url));
+          return (
+            <Collapsible key={section.title} defaultOpen={sectionActive || true}>
+              <SidebarGroup>
+                <CollapsibleTrigger className="w-full">
+                  <SidebarGroupLabel className="text-sidebar-foreground/40 text-xs uppercase tracking-wider flex items-center justify-between cursor-pointer hover:text-sidebar-foreground/60 transition-colors">
+                    {!collapsed && <span>{section.title}</span>}
+                    {!collapsed && <ChevronDown className="h-3 w-3" />}
+                  </SidebarGroupLabel>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {section.items.map((item) => (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive(item.url)}
+                            tooltip={item.title}
+                          >
+                            <NavLink
+                              to={item.url}
+                              className="hover:bg-sidebar-accent"
+                              activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                            >
+                              <item.icon className="h-4 w-4" />
+                              {!collapsed && <span>{item.title}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter className="p-3">
@@ -152,18 +146,12 @@ export function AppSidebar() {
                 {profile?.role_title}
               </p>
             </div>
-            <button
-              onClick={signOut}
-              className="text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
-            >
+            <button onClick={signOut} className="text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors">
               <LogOut className="h-4 w-4" />
             </button>
           </div>
         ) : (
-          <button
-            onClick={signOut}
-            className="flex items-center justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors mx-auto"
-          >
+          <button onClick={signOut} className="flex items-center justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors mx-auto">
             <LogOut className="h-4 w-4" />
           </button>
         )}
