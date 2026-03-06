@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Users, Calendar } from "lucide-react";
+import { Plus, Users, Trophy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { differenceInDays, format } from "date-fns";
+import { differenceInDays } from "date-fns";
 
 const statusConfig = {
   discussion: { label: "Discussion", className: "bg-info/15 text-info border-info/30" },
@@ -29,11 +29,21 @@ const Partners = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ["partners"],
     queryFn: async () => {
       const { data, error } = await supabase.from("partners").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("*");
       if (error) throw error;
       return data;
     },
@@ -46,9 +56,7 @@ const Partners = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["partners"] });
-      setEmail("");
-      setName("");
-      setDialogOpen(false);
+      setEmail(""); setName(""); setDialogOpen(false);
       toast({ title: "Partner added" });
     },
   });
@@ -70,38 +78,81 @@ const Partners = () => {
     return differenceInDays(new Date(), new Date(refDate));
   };
 
+  // Signed contracts per user
+  const signedByUser = partners
+    .filter((p) => p.status === "signed" && p.created_by)
+    .reduce((acc, p) => {
+      acc[p.created_by!] = (acc[p.created_by!] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const getProfileNameByUserId = (userId: string) =>
+    profiles.find((p) => p.user_id === userId)?.full_name || "Unknown";
+
+  const filteredPartners = statusFilter === "all" ? partners : partners.filter((p) => p.status === statusFilter);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Partners</h1>
           <p className="text-muted-foreground font-body mt-1">Manage partner pipeline</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-1" /> Add Partner</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Add Partner</DialogTitle></DialogHeader>
-            <div className="space-y-4 pt-2">
-              <Input placeholder="Partner name" value={name} onChange={(e) => setName(e.target.value)} />
-              <Input placeholder="Email address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <Button className="w-full" onClick={() => createPartner.mutate()} disabled={!email}>
-                Add Partner
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>{statusConfig[s].label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="h-4 w-4 mr-1" /> Add Partner</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Add Partner</DialogTitle></DialogHeader>
+              <div className="space-y-4 pt-2">
+                <Input placeholder="Partner name" value={name} onChange={(e) => setName(e.target.value)} />
+                <Input placeholder="Email address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Button className="w-full" onClick={() => createPartner.mutate()} disabled={!email}>Add Partner</Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Signed contracts leaderboard */}
+      {Object.keys(signedByUser).length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {Object.entries(signedByUser)
+            .sort(([, a], [, b]) => b - a)
+            .map(([userId, count]) => (
+              <Card key={userId}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-warning" />
+                  <div>
+                    <p className="text-sm font-semibold">{getProfileNameByUserId(userId)}</p>
+                    <p className="text-xs text-muted-foreground">{count} signed contract{count !== 1 ? "s" : ""}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading partners...</div>
-          ) : partners.length === 0 ? (
+          ) : filteredPartners.length === 0 ? (
             <div className="py-16 text-center">
               <Users className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">No partners yet</p>
+              <p className="text-muted-foreground">{statusFilter === "all" ? "No partners yet" : "No partners with this status"}</p>
             </div>
           ) : (
             <Table>
@@ -109,18 +160,22 @@ const Partners = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Added By</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Post</TableHead>
                   <TableHead className="text-center">Days</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {partners.map((p) => {
+                {filteredPartners.map((p) => {
                   const days = getDayCount(p);
                   return (
                     <TableRow key={p.id}>
                       <TableCell className="font-medium">{p.name || "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{p.email}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {p.created_by ? getProfileNameByUserId(p.created_by) : "—"}
+                      </TableCell>
                       <TableCell>
                         <Select
                           value={p.status}
