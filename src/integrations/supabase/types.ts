@@ -14,16 +14,380 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      bundle_components: {
+        Row: {
+          bundle_id: string
+          id: string
+          inventory_item_id: string
+          quantity: number
+        }
+        Insert: {
+          bundle_id: string
+          id?: string
+          inventory_item_id: string
+          quantity?: number
+        }
+        Update: {
+          bundle_id?: string
+          id?: string
+          inventory_item_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bundle_components_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "product_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bundle_components_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_history: {
+        Row: {
+          change_amount: number
+          changed_by: string | null
+          created_at: string
+          id: string
+          inventory_item_id: string
+          reason: string | null
+        }
+        Insert: {
+          change_amount: number
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          inventory_item_id: string
+          reason?: string | null
+        }
+        Update: {
+          change_amount?: number
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          inventory_item_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_history_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_items: {
+        Row: {
+          created_at: string
+          current_stock: number
+          description: string | null
+          id: string
+          name: string
+          reorder_threshold: number
+          storage_location: string | null
+          supplier_contact: string | null
+          supplier_name: string | null
+          supplier_url: string | null
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_stock?: number
+          description?: string | null
+          id?: string
+          name: string
+          reorder_threshold?: number
+          storage_location?: string | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          supplier_url?: string | null
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_stock?: number
+          description?: string | null
+          id?: string
+          name?: string
+          reorder_threshold?: number
+          storage_location?: string | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          supplier_url?: string | null
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          color: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      product_bundles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          role_title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          role_title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          role_title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_subtasks: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          task_id: string
+          title: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          task_id: string
+          title: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_subtasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          assignee_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "manager" | "member"
+      fulfillment_status: "not_started" | "preparing" | "shipped" | "delivered"
+      task_priority: "high" | "medium" | "low"
+      task_status: "not_started" | "in_progress" | "completed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +514,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "manager", "member"],
+      fulfillment_status: ["not_started", "preparing", "shipped", "delivered"],
+      task_priority: ["high", "medium", "low"],
+      task_status: ["not_started", "in_progress", "completed"],
+    },
   },
 } as const
