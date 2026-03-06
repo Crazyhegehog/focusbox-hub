@@ -40,7 +40,7 @@ const Team = () => {
             const initials = member.full_name
               ? member.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
               : "U";
-            const roles = (member.user_roles as any[]) || [];
+            const roles = member.roles || [];
             return (
               <Card key={member.id} className="border-border/50">
                 <CardContent className="flex items-center gap-4 py-5">
@@ -53,7 +53,7 @@ const Team = () => {
                     <p className="font-medium truncate">{member.full_name || "Unknown"}</p>
                     <p className="text-sm text-muted-foreground font-body truncate">{member.role_title}</p>
                     <div className="flex gap-1 mt-1">
-                      {roles.map((r: any) => (
+                      {roles.map((r) => (
                         <Badge key={r.role} variant="secondary" className="text-xs">
                           {r.role}
                         </Badge>
