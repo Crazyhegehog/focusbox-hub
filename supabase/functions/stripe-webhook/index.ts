@@ -93,12 +93,17 @@ Deno.serve(async (req) => {
         0
       );
 
+      // Extract shipping address and phone
+      const shipping = session.shipping_details || session.customer_details;
+      const address = shipping?.address;
+
       // Create order in database
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
           customer_name: session.customer_details?.name || session.customer_email || "Stripe Customer",
           customer_email: session.customer_email || "",
+          customer_phone: session.customer_details?.phone || "",
           stripe_session_id: session.id,
           stripe_payment_intent: typeof session.payment_intent === "string" 
             ? session.payment_intent 
@@ -107,8 +112,15 @@ Deno.serve(async (req) => {
           currency: session.currency || "eur",
           stripe_product_name: productNames,
           quantity: totalQuantity,
+          shipping_address: address?.line1
+            ? [address.line1, address.line2].filter(Boolean).join(", ")
+            : "",
+          shipping_city: address?.city || "",
+          shipping_country: address?.country || "",
+          shipping_postal_code: address?.postal_code || "",
+          shipping_state: address?.state || "",
           status: "pending",
-          phone_size: "", // Default, can be extracted from metadata
+          phone_size: session.metadata?.phone_size || "",
         })
         .select()
         .single();

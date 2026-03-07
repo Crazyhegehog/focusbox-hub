@@ -270,9 +270,15 @@ export type Database = {
           currency: string | null
           customer_email: string | null
           customer_name: string
+          customer_phone: string | null
           id: string
           phone_size: string
           quantity: number | null
+          shipping_address: string | null
+          shipping_city: string | null
+          shipping_country: string | null
+          shipping_postal_code: string | null
+          shipping_state: string | null
           status: Database["public"]["Enums"]["order_status"]
           stripe_payment_intent: string | null
           stripe_product_name: string | null
@@ -286,9 +292,15 @@ export type Database = {
           currency?: string | null
           customer_email?: string | null
           customer_name?: string
+          customer_phone?: string | null
           id?: string
           phone_size?: string
           quantity?: number | null
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_postal_code?: string | null
+          shipping_state?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stripe_payment_intent?: string | null
           stripe_product_name?: string | null
@@ -302,9 +314,15 @@ export type Database = {
           currency?: string | null
           customer_email?: string | null
           customer_name?: string
+          customer_phone?: string | null
           id?: string
           phone_size?: string
           quantity?: number | null
+          shipping_address?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_postal_code?: string | null
+          shipping_state?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stripe_payment_intent?: string | null
           stripe_product_name?: string | null
