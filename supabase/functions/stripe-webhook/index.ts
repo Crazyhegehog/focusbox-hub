@@ -79,11 +79,14 @@ Deno.serve(async (req) => {
         expand: ["customer", "line_items", "line_items.data.price.product"],
       });
 
-      // Retrieve line items from Stripe
-      const lineItems = await stripe.checkout.sessions.listLineItems(
+      // Use line items from expanded session, or fetch separately
+      const lineItems = session.line_items || await stripe.checkout.sessions.listLineItems(
         session.id,
         { expand: ["data.price.product"] }
       );
+
+      console.log("Customer details:", JSON.stringify(session.customer_details));
+      console.log("Shipping details:", JSON.stringify(session.shipping_details));
 
       // Build product name from line items
       const productNames = lineItems.data
@@ -98,9 +101,13 @@ Deno.serve(async (req) => {
         0
       );
 
-      // Extract shipping address and phone
-      const shipping = session.shipping_details || session.customer_details;
-      const address = shipping?.address;
+      // Extract shipping address - prefer shipping_details, fallback to customer_details
+      const shippingAddress = session.shipping_details?.address || session.customer_details?.address;
+      const customerName = session.shipping_details?.name || session.customer_details?.name || session.customer_email || "Stripe Customer";
+      const customerPhone = session.customer_details?.phone || "";
+      const customerEmail = session.customer_email || session.customer_details?.email || "";
+
+      console.log("Extracted - Name:", customerName, "Email:", customerEmail, "Address:", JSON.stringify(shippingAddress));
 
       // Create order in database
       const { data: order, error: orderError } = await supabase
