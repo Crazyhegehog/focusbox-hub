@@ -1,29 +1,39 @@
+import { ExternalLink, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText } from "lucide-react";
 
 const PartnerBrief = () => {
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Partner Brief</h1>
-        <p className="text-muted-foreground font-body mt-1">Our partner brieflet document</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Partner Brief</h1>
+          <p className="text-muted-foreground font-body mt-1">
+            Embedded LockIn brieflet for partner conversations
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <a href="/lockin-brieflet.pdf" target="_blank" rel="noreferrer">
+            <ExternalLink className="h-4 w-4 mr-1" />
+            Open PDF
+          </a>
+        </Button>
       </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="h-5 w-5" /> LockIn Partner Brieflet
+            <FileText className="h-5 w-5" />
+            LockIn Brieflet
           </CardTitle>
         </CardHeader>
-        <CardContent className="prose prose-sm max-w-none">
-          <p className="text-muted-foreground font-body leading-relaxed">
-            Add your partner brieflet content here. You can include information about your company,
-            partnership benefits, collaboration expectations, and any other relevant details for potential partners.
-          </p>
-          <div className="mt-6 rounded-lg border border-dashed border-border/50 p-8 text-center">
-            <FileText className="mx-auto h-10 w-10 text-muted-foreground/30 mb-3" />
-            <p className="text-sm text-muted-foreground">
-              Replace this placeholder with your actual partner brief content.
-            </p>
+        <CardContent>
+          <div className="rounded-xl border border-border/60 overflow-hidden bg-muted/20">
+            <iframe
+              src="/lockin-brieflet.pdf"
+              title="LockIn Brieflet"
+              className="h-[78vh] w-full"
+            />
           </div>
         </CardContent>
       </Card>

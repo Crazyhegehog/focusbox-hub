@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Mail, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const DEFAULT_TEMPLATES = [
+  {
+    title: "First Outreach",
+    body:
+      "Hallo [Name],\n\nich hoffe, es geht dir gut. Ich melde mich von LockIn, weil wir lokale Partner sichtbarer machen und Nutzer fuer handyfreie Zeit mit einloesbaren Gutscheinen belohnen.\n\nIch glaube, dass [Unternehmen] gut zu unserer Community passen koennte. Gerne zeige ich dir kurz, wie eine Partnerschaft aussieht und welchen Gutschein wir gemeinsam aufsetzen koennten.\n\nHaettest du diese oder naechste Woche 15 Minuten fuer einen kurzen Austausch?\n\nLiebe Gruesse\n[Dein Name]\nLockIn",
+  },
+  {
+    title: "Empty Template",
+    body: "",
+  },
+];
+
 const EmailTemplates = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -16,6 +28,7 @@ const EmailTemplates = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const seededDefaultsRef = useRef(false);
 
   const { data: templates = [], isLoading } = useQuery({
     queryKey: ["email_templates"],
@@ -57,6 +70,22 @@ const EmailTemplates = () => {
   const resetForm = () => { setTitle(""); setBody(""); setEditId(null); setDialogOpen(false); };
 
   const openEdit = (t: any) => { setEditId(t.id); setTitle(t.title); setBody(t.body); setDialogOpen(true); };
+
+  useEffect(() => {
+    if (isLoading || seededDefaultsRef.current || templates.length > 0) return;
+
+    seededDefaultsRef.current = true;
+    supabase
+      .from("email_templates")
+      .insert(DEFAULT_TEMPLATES)
+      .then(({ error }) => {
+        if (error) {
+          seededDefaultsRef.current = false;
+          return;
+        }
+        queryClient.invalidateQueries({ queryKey: ["email_templates"] });
+      });
+  }, [isLoading, queryClient, templates.length]);
 
   return (
     <div className="space-y-6">

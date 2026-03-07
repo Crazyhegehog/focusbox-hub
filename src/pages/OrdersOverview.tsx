@@ -22,6 +22,9 @@ const statusConfig = {
   sent: { label: "Sent", className: "bg-success/15 text-success border-success/30" },
 };
 
+const hasDisplayableAmount = (amount: number | null | undefined) =>
+  typeof amount === "number" && amount > 0;
+
 const OrdersOverview = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -129,7 +132,9 @@ const OrdersOverview = () => {
     updateOrder.mutate({ id: editingId, updates: editValues });
   };
 
-  const filteredOrders = orders.filter((order) => {
+  const validOrders = orders.filter((order) => hasDisplayableAmount(order.amount_total));
+
+  const filteredOrders = validOrders.filter((order) => {
     const matchesSearch =
       !searchTerm ||
       order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -140,11 +145,11 @@ const OrdersOverview = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const totalOrders = orders.length;
-  const toShip = orders.filter((o) => o.status !== "sent").length;
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.amount_total || 0), 0);
+  const totalOrders = validOrders.length;
+  const toShip = validOrders.filter((o) => o.status !== "sent").length;
+  const totalRevenue = validOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0);
 
-  const phoneSizeCounts = orders
+  const phoneSizeCounts = validOrders
     .filter((o) => o.status !== "sent")
     .reduce((acc, o) => {
       if (o.phone_size) acc[o.phone_size] = (acc[o.phone_size] || 0) + (o.quantity || 1);

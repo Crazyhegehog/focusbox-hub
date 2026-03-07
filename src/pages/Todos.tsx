@@ -96,7 +96,7 @@ const Todos = () => {
     },
   });
 
-  const { data: projects = [] } = useQuery({
+  const { data: projects = [], error: projectsError } = useQuery({
     queryKey: ["todo_projects"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -108,7 +108,7 @@ const Todos = () => {
     },
   });
 
-  const { data: todos = [], isLoading } = useQuery({
+  const { data: todos = [], isLoading, error: todosError } = useQuery({
     queryKey: ["todos"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -177,6 +177,13 @@ const Todos = () => {
       setProjectForm(emptyProjectForm);
       setProjectDialogOpen(false);
       toast({ title: "Subproject created" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Subproject could not be created",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -252,6 +259,13 @@ const Todos = () => {
       setTaskDialogOpen(false);
       setTaskForm(emptyTaskForm);
       toast({ title: taskForm.id ? "Task updated" : "Task created" });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: taskForm.id ? "Task could not be updated" : "Task could not be created",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -429,6 +443,15 @@ const Todos = () => {
 
   return (
     <div className="space-y-6">
+      {(projectsError || todosError) && (
+        <Card className="border-destructive/40">
+          <CardContent className="p-4 text-sm text-destructive">
+            The task workspace is missing required database tables or permissions. Apply the
+            latest Supabase migration before using subprojects and notes.
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Task Workspace</h1>
@@ -720,6 +743,26 @@ const Todos = () => {
           );
         })}
       </div>
+
+      {projects.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Subprojects</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {projects.map((project) => (
+              <Badge
+                key={project.id}
+                variant="outline"
+                className="px-3 py-1"
+                style={{ borderColor: project.color }}
+              >
+                {project.name}
+              </Badge>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <Card className="border-dashed border-border/50">

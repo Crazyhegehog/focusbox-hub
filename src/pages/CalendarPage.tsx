@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  addDays,
   endOfMonth,
+  endOfDay,
   format,
   isSameDay,
   isWithinInterval,
   parseISO,
+  startOfDay,
   startOfMonth,
 } from "date-fns";
 import {
@@ -223,6 +226,13 @@ const CalendarPage = () => {
     [todo.start_date, todo.due_date].filter(Boolean).map((date) => parseISO(date!))
   );
   const eventDates = events.map((event) => parseISO(event.event_date));
+  const nextTwoWeeksRange = {
+    start: startOfDay(new Date()),
+    end: endOfDay(addDays(new Date(), 13)),
+  };
+  const nextTwoWeeksItems = scheduleItems.filter((item) =>
+    isWithinInterval(parseISO(item.date), nextTwoWeeksRange)
+  );
 
   return (
     <div className="space-y-6">
@@ -393,7 +403,17 @@ const CalendarPage = () => {
                 task: "bg-warning/10 font-semibold text-foreground",
                 event: "border border-info/40",
               }}
-              className="rounded-md border border-border/60"
+              className="rounded-md border border-border/60 p-5"
+              classNames={{
+                months: "flex w-full",
+                month: "w-full space-y-6",
+                table: "w-full border-collapse",
+                head_row: "grid grid-cols-7",
+                row: "mt-3 grid grid-cols-7",
+                head_cell: "h-10 text-center text-sm font-medium text-muted-foreground",
+                cell: "h-24 p-1 text-left align-top",
+                day: "h-full w-full justify-start rounded-xl px-2 py-2 text-left text-sm font-medium",
+              }}
             />
           </CardContent>
         </Card>
@@ -491,13 +511,13 @@ const CalendarPage = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Full schedule</CardTitle>
+          <CardTitle>Next 14 Days</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {scheduleItems.length === 0 ? (
-            <p className="text-muted-foreground">No scheduled tasks or events yet</p>
+          {nextTwoWeeksItems.length === 0 ? (
+            <p className="text-muted-foreground">No scheduled tasks or events in the next two weeks</p>
           ) : (
-            scheduleItems.map((item) => {
+            nextTwoWeeksItems.map((item) => {
               if (item.type === "event") {
                 const event = item.event as CalendarEvent;
                 const config = eventTypeConfig[event.type];

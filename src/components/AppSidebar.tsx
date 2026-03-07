@@ -1,7 +1,5 @@
 import {
-  Package,
   ClipboardList,
-  Boxes,
   Users,
   Mail,
   FileText,
@@ -32,10 +30,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 const sections = [
   {
-    title: "Packages / Inventory",
+    title: "Packages",
     items: [
       { title: "Orders", url: "/orders", icon: ClipboardList },
-      { title: "Inventory Tracking", url: "/inventory-tracking", icon: Boxes },
     ],
   },
   {

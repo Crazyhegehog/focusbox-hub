@@ -7,7 +7,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/AppLayout";
 import Auth from "./pages/Auth";
 import OrdersOverview from "./pages/OrdersOverview";
-import InventoryTracking from "./pages/InventoryTracking";
 import Partners from "./pages/Partners";
 import EmailTemplates from "./pages/EmailTemplates";
 import PartnerBrief from "./pages/PartnerBrief";
@@ -29,7 +28,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Navigate to="/orders" replace />} />
             <Route path="/orders" element={<AppLayout><OrdersOverview /></AppLayout>} />
-            <Route path="/inventory-tracking" element={<AppLayout><InventoryTracking /></AppLayout>} />
+            <Route path="/inventory-tracking" element={<Navigate to="/orders" replace />} />
             <Route path="/partners" element={<AppLayout><Partners /></AppLayout>} />
             <Route path="/email-templates" element={<AppLayout><EmailTemplates /></AppLayout>} />
             <Route path="/partner-brief" element={<AppLayout><PartnerBrief /></AppLayout>} />
