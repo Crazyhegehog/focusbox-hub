@@ -70,15 +70,23 @@ Deno.serve(async (req) => {
 
     // Handle checkout.session.completed
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const rawSession = event.data.object as Stripe.Checkout.Session;
 
-      console.log("Processing checkout session:", session.id);
+      console.log("Processing checkout session:", rawSession.id);
 
-      // Retrieve line items from Stripe
-      const lineItems = await stripe.checkout.sessions.listLineItems(
+      // Retrieve full session with all details expanded
+      const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
+        expand: ["customer", "line_items", "line_items.data.price.product"],
+      });
+
+      // Use line items from expanded session, or fetch separately
+      const lineItems = session.line_items || await stripe.checkout.sessions.listLineItems(
         session.id,
         { expand: ["data.price.product"] }
       );
+
+      console.log("Customer details:", JSON.stringify(session.customer_details));
+      console.log("Shipping details:", JSON.stringify(session.shipping_details));
 
       // Build product name from line items
       const productNames = lineItems.data
@@ -93,17 +101,21 @@ Deno.serve(async (req) => {
         0
       );
 
-      // Extract shipping address and phone
-      const shipping = session.shipping_details || session.customer_details;
-      const address = shipping?.address;
+      // Extract shipping address - prefer shipping_details, fallback to customer_details
+      const shippingAddress = session.shipping_details?.address || session.customer_details?.address;
+      const customerName = session.shipping_details?.name || session.customer_details?.name || session.customer_email || "Stripe Customer";
+      const customerPhone = session.customer_details?.phone || "";
+      const customerEmail = session.customer_email || session.customer_details?.email || "";
+
+      console.log("Extracted - Name:", customerName, "Email:", customerEmail, "Address:", JSON.stringify(shippingAddress));
 
       // Create order in database
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert({
-          customer_name: session.customer_details?.name || session.customer_email || "Stripe Customer",
-          customer_email: session.customer_email || "",
-          customer_phone: session.customer_details?.phone || "",
+          customer_name: customerName,
+          customer_email: customerEmail,
+          customer_phone: customerPhone,
           stripe_session_id: session.id,
           stripe_payment_intent: typeof session.payment_intent === "string" 
             ? session.payment_intent 
@@ -112,15 +124,15 @@ Deno.serve(async (req) => {
           currency: session.currency || "eur",
           stripe_product_name: productNames,
           quantity: totalQuantity,
-          shipping_address: address?.line1
-            ? [address.line1, address.line2].filter(Boolean).join(", ")
+          shipping_address: shippingAddress?.line1
+            ? [shippingAddress.line1, shippingAddress.line2].filter(Boolean).join(", ")
             : "",
-          shipping_city: address?.city || "",
-          shipping_country: address?.country || "",
-          shipping_postal_code: address?.postal_code || "",
-          shipping_state: address?.state || "",
+          shipping_city: shippingAddress?.city || "",
+          shipping_country: shippingAddress?.country || "",
+          shipping_postal_code: shippingAddress?.postal_code || "",
+          shipping_state: shippingAddress?.state || "",
           status: "pending",
-          phone_size: session.metadata?.phone_size || "",
+          phone_size: session.metadata?.phone_size || session.metadata?.Phone_Size || session.metadata?.phoneSize || "",
         })
         .select()
         .single();
