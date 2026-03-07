@@ -211,32 +211,104 @@ export type Database = {
         }
         Relationships: []
       }
-      orders: {
+      order_items: {
         Row: {
           created_at: string
-          created_by: string | null
-          customer_name: string
           id: string
-          phone_size: string
-          status: Database["public"]["Enums"]["order_status"]
-          updated_at: string
+          inventory_item_id: string | null
+          order_id: string
+          product_name: string
+          quantity: number
+          stripe_price_id: string | null
+          stripe_product_id: string | null
+          unit_price: number
         }
         Insert: {
           created_at?: string
-          created_by?: string | null
-          customer_name?: string
           id?: string
-          phone_size?: string
-          status?: Database["public"]["Enums"]["order_status"]
-          updated_at?: string
+          inventory_item_id?: string | null
+          order_id: string
+          product_name?: string
+          quantity?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          unit_price?: number
         }
         Update: {
           created_at?: string
+          id?: string
+          inventory_item_id?: string | null
+          order_id?: string
+          product_name?: string
+          quantity?: number
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          amount_total: number | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          customer_email: string | null
+          customer_name: string
+          id: string
+          phone_size: string
+          quantity: number | null
+          status: Database["public"]["Enums"]["order_status"]
+          stripe_payment_intent: string | null
+          stripe_product_name: string | null
+          stripe_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_total?: number | null
+          created_at?: string
           created_by?: string | null
+          currency?: string | null
+          customer_email?: string | null
           customer_name?: string
           id?: string
           phone_size?: string
+          quantity?: number | null
           status?: Database["public"]["Enums"]["order_status"]
+          stripe_payment_intent?: string | null
+          stripe_product_name?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_total?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          customer_email?: string | null
+          customer_name?: string
+          id?: string
+          phone_size?: string
+          quantity?: number | null
+          status?: Database["public"]["Enums"]["order_status"]
+          stripe_payment_intent?: string | null
+          stripe_product_name?: string | null
+          stripe_session_id?: string | null
           updated_at?: string
         }
         Relationships: []
