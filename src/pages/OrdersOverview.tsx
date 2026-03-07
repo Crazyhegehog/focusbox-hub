@@ -72,6 +72,18 @@ const OrdersOverview = () => {
     },
   });
 
+  const deleteOrder = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from("order_items").delete().eq("order_id", id);
+      const { error } = await supabase.from("orders").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({ title: "Bestellung gelöscht" });
+    },
+  });
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from("orders").update({ status: status as any }).eq("id", id);
