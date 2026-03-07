@@ -22,16 +22,15 @@ Deno.serve(async (req) => {
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-  const SUPABASE_PUBLISHABLE_KEY = Deno.env.get("SUPABASE_PUBLISHABLE_KEY")!;
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
   // Verify user
-  const userClient = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: authHeader } },
   });
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-  if (claimsError || !claimsData?.claims) {
+  const { data: { user }, error: userError } = await userClient.auth.getUser();
+  if (userError || !user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,7 +58,7 @@ Deno.serve(async (req) => {
       const params: Stripe.Checkout.SessionListParams = {
         limit: 100,
         status: "complete",
-        expand: ["data.line_items", "data.line_items.data.price.product"],
+        expand: ["data.line_items", "data.line_items.data.price.product", "data.customer"],
       };
       if (startingAfter) params.starting_after = startingAfter;
 
@@ -78,7 +77,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Get line items (may need separate call if not expanded)
+        // Get line items
         let lineItems;
         try {
           lineItems = await stripe.checkout.sessions.listLineItems(session.id, {
@@ -100,16 +99,38 @@ Deno.serve(async (req) => {
           0
         );
 
-        // Extract shipping address
-        const shipping = session.shipping_details || session.customer_details;
-        const address = shipping?.address;
+        // Extract ALL shipping and customer details
+        const shipping = session.shipping_details;
+        const customerDetails = session.customer_details;
+        const shippingAddress = shipping?.address || customerDetails?.address;
+
+        // Try to get customer name from multiple sources
+        const customerName =
+          shipping?.name ||
+          customerDetails?.name ||
+          session.customer_email ||
+          "Stripe Customer";
+
+        // Get phone from customer details or shipping
+        const customerPhone = customerDetails?.phone || "";
+
+        // Get email
+        const customerEmail = session.customer_email || customerDetails?.email || "";
+
+        // Extract phone_size from metadata or line item descriptions
+        const phoneSize =
+          session.metadata?.phone_size ||
+          session.metadata?.Phone_Size ||
+          session.metadata?.phoneSize ||
+          session.metadata?.size ||
+          "";
 
         const { data: order, error: orderError } = await supabase
           .from("orders")
           .insert({
-            customer_name: session.customer_details?.name || session.customer_email || "Stripe Customer",
-            customer_email: session.customer_email || "",
-            customer_phone: session.customer_details?.phone || "",
+            customer_name: customerName,
+            customer_email: customerEmail,
+            customer_phone: customerPhone,
             stripe_session_id: session.id,
             stripe_payment_intent:
               typeof session.payment_intent === "string"
@@ -119,15 +140,15 @@ Deno.serve(async (req) => {
             currency: session.currency || "eur",
             stripe_product_name: productNames,
             quantity: totalQuantity,
-            shipping_address: address?.line1
-              ? [address.line1, address.line2].filter(Boolean).join(", ")
+            shipping_address: shippingAddress?.line1
+              ? [shippingAddress.line1, shippingAddress.line2].filter(Boolean).join(", ")
               : "",
-            shipping_city: address?.city || "",
-            shipping_country: address?.country || "",
-            shipping_postal_code: address?.postal_code || "",
-            shipping_state: address?.state || "",
+            shipping_city: shippingAddress?.city || "",
+            shipping_country: shippingAddress?.country || "",
+            shipping_postal_code: shippingAddress?.postal_code || "",
+            shipping_state: shippingAddress?.state || "",
             status: "pending",
-            phone_size: session.metadata?.phone_size || "",
+            phone_size: phoneSize,
             created_at: new Date(session.created * 1000).toISOString(),
           })
           .select()
