@@ -335,6 +335,23 @@ const OrdersOverview = () => {
                           ) : (
                             <div className="flex justify-end gap-1">
                               <Button size="sm" variant="ghost" onClick={() => startEdit(order)}><Pencil className="h-3 w-3" /></Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Bestellung löschen?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Bestellung von {order.customer_name} wird unwiderruflich gelöscht.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteOrder.mutate(order.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                               {order.status === "pending" && (
                                 <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: order.id, status: "packaged" })}>
                                   <Package className="h-3 w-3 mr-1" /> Pack
