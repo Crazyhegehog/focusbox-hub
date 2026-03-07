@@ -58,7 +58,6 @@ Deno.serve(async (req) => {
       const params: Stripe.Checkout.SessionListParams = {
         limit: 100,
         status: "complete",
-        expand: ["data.line_items", "data.line_items.data.price.product", "data.customer"],
       };
       if (startingAfter) params.starting_after = startingAfter;
 
