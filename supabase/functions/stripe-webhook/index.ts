@@ -70,9 +70,14 @@ Deno.serve(async (req) => {
 
     // Handle checkout.session.completed
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const rawSession = event.data.object as Stripe.Checkout.Session;
 
-      console.log("Processing checkout session:", session.id);
+      console.log("Processing checkout session:", rawSession.id);
+
+      // Retrieve full session with all details expanded
+      const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
+        expand: ["customer", "line_items", "line_items.data.price.product"],
+      });
 
       // Retrieve line items from Stripe
       const lineItems = await stripe.checkout.sessions.listLineItems(
