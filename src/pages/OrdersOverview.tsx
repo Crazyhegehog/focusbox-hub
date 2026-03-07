@@ -412,6 +412,14 @@ const OrdersOverview = () => {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground pt-2">Created: {new Date(detailOrder.created_at).toLocaleString("de-DE")}</p>
+                {detailOrder.stripe_metadata && Object.keys(detailOrder.stripe_metadata).length > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-muted-foreground mb-2 font-medium">Stripe Metadata</p>
+                    <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">
+                      {JSON.stringify(detailOrder.stripe_metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             </>
           )}
