@@ -1,0 +1,1 @@
+CREATE POLICY "Orders deletable by authenticated" ON public.orders FOR DELETE TO authenticated USING (true);

@@ -280,6 +280,7 @@ export type Database = {
           shipping_postal_code: string | null
           shipping_state: string | null
           status: Database["public"]["Enums"]["order_status"]
+          stripe_metadata: Json | null
           stripe_payment_intent: string | null
           stripe_product_name: string | null
           stripe_session_id: string | null
@@ -302,6 +303,7 @@ export type Database = {
           shipping_postal_code?: string | null
           shipping_state?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          stripe_metadata?: Json | null
           stripe_payment_intent?: string | null
           stripe_product_name?: string | null
           stripe_session_id?: string | null
@@ -324,6 +326,7 @@ export type Database = {
           shipping_postal_code?: string | null
           shipping_state?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          stripe_metadata?: Json | null
           stripe_payment_intent?: string | null
           stripe_product_name?: string | null
           stripe_session_id?: string | null

@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Package, Plus, Truck, CheckCircle2, Search, Download, Mail, MapPin, Phone, Pencil, Save, X } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Package, Plus, Truck, CheckCircle2, Search, Download, Mail, MapPin, Phone, Pencil, Save, X, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const PHONE_SIZES = ["iPhone 14", "iPhone 15", "iPhone 15 Pro", "iPhone 16", "iPhone 16 Pro", "Samsung S24", "Samsung S24 Ultra", "Other"];
@@ -68,6 +69,18 @@ const OrdersOverview = () => {
       setEditingId(null);
       setEditValues({});
       toast({ title: "Bestellung aktualisiert" });
+    },
+  });
+
+  const deleteOrder = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from("order_items").delete().eq("order_id", id);
+      const { error } = await supabase.from("orders").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({ title: "Bestellung gelöscht" });
     },
   });
 
@@ -322,6 +335,23 @@ const OrdersOverview = () => {
                           ) : (
                             <div className="flex justify-end gap-1">
                               <Button size="sm" variant="ghost" onClick={() => startEdit(order)}><Pencil className="h-3 w-3" /></Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Bestellung löschen?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Bestellung von {order.customer_name} wird unwiderruflich gelöscht.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteOrder.mutate(order.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                               {order.status === "pending" && (
                                 <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: order.id, status: "packaged" })}>
                                   <Package className="h-3 w-3 mr-1" /> Pack
@@ -382,6 +412,14 @@ const OrdersOverview = () => {
                   </div>
                 )}
                 <p className="text-xs text-muted-foreground pt-2">Created: {new Date(detailOrder.created_at).toLocaleString("de-DE")}</p>
+                {detailOrder.stripe_metadata && Object.keys(detailOrder.stripe_metadata).length > 0 && (
+                  <div className="pt-2 border-t">
+                    <p className="text-muted-foreground mb-2 font-medium">Stripe Metadata</p>
+                    <pre className="text-xs bg-muted p-3 rounded-md overflow-x-auto whitespace-pre-wrap break-all max-h-[300px] overflow-y-auto">
+                      {JSON.stringify(detailOrder.stripe_metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             </>
           )}
