@@ -200,8 +200,8 @@ const OrdersOverview = () => {
         await externalSupabase.from("orders").delete().eq("id", id);
       }
       
-      // Sort by created_at ascending (oldest first)
-      deduped.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      // Sort by created_at descending (newest first)
+      deduped.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
       return deduped as ExternalOrder[];
     },
