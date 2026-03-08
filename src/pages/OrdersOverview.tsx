@@ -121,6 +121,7 @@ const OrdersOverview = () => {
   const [editValues, setEditValues] = useState<Partial<ExternalOrder>>({});
   const [importingAddresses, setImportingAddresses] = useState(false);
   const [importingSpreadsheet, setImportingSpreadsheet] = useState(false);
+  const [importingStripe, setImportingStripe] = useState(false);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["external-orders"],
@@ -455,6 +456,68 @@ const OrdersOverview = () => {
     }
   };
 
+  const handleImportStripeOrders = async () => {
+    setImportingStripe(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-stripe-orders");
+      if (error) throw error;
+
+      const stripeSessions = data.sessions || [];
+      if (stripeSessions.length === 0) {
+        toast({ title: "Keine Stripe-Bestellungen gefunden" });
+        return;
+      }
+
+      // Get existing orders from external DB
+      const { data: existing } = await externalSupabase.from("orders").select("customer_email, stripe_payment_intent, stripe_session_id");
+      const existingEmails = new Set((existing || []).map((o: any) => o.customer_email?.trim().toLowerCase()).filter(Boolean));
+      const existingIntents = new Set((existing || []).map((o: any) => o.stripe_payment_intent).filter(Boolean));
+      const existingSessions = new Set((existing || []).map((o: any) => o.stripe_session_id).filter(Boolean));
+
+      let imported = 0;
+      let skipped = 0;
+
+      for (const s of stripeSessions) {
+        // Skip if already exists by session, payment intent, or email
+        if (s.stripe_session_id && existingSessions.has(s.stripe_session_id)) { skipped++; continue; }
+        if (s.stripe_payment_intent && existingIntents.has(s.stripe_payment_intent)) { skipped++; continue; }
+        if (s.customer_email && existingEmails.has(s.customer_email.trim().toLowerCase())) { skipped++; continue; }
+
+        const { error: insertError } = await externalSupabase.from("orders").insert({
+          customer_name: s.customer_name || s.customer_email || "Stripe Kunde",
+          customer_email: s.customer_email || "",
+          phone_model: s.phone_model || "",
+          quantity: s.quantity || 1,
+          amount_total: s.amount_total || 0,
+          currency: s.currency || "chf",
+          delivery_method: s.delivery_method || "shipping",
+          shipping_name: s.shipping_name || "",
+          shipping_address_line1: s.shipping_address_line1 || "",
+          shipping_address_line2: s.shipping_address_line2 || "",
+          shipping_city: s.shipping_city || "",
+          shipping_postal_code: s.shipping_postal_code || "",
+          shipping_country: s.shipping_country || "",
+          order_status: s.order_status || "paid",
+          stripe_session_id: s.stripe_session_id,
+          stripe_payment_intent: s.stripe_payment_intent,
+          created_at: s.created_at,
+        });
+
+        if (!insertError) {
+          imported++;
+          if (s.customer_email) existingEmails.add(s.customer_email.trim().toLowerCase());
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["external-orders"] });
+      toast({ title: "Stripe-Import abgeschlossen", description: `${imported} neu importiert, ${skipped} übersprungen.` });
+    } catch (err: any) {
+      toast({ title: "Stripe-Import Fehler", description: err.message, variant: "destructive" });
+    } finally {
+      setImportingStripe(false);
+    }
+  };
+
   const startEditing = (order: ExternalOrder) => {
     setEditingInfo(true);
     setEditValues({
@@ -522,6 +585,9 @@ const OrdersOverview = () => {
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={handleImportSpreadsheet} disabled={importingSpreadsheet}>
             <Download className={`h-4 w-4 mr-1.5 ${importingSpreadsheet ? "animate-spin" : ""}`} /> Excel-Import
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleImportStripeOrders} disabled={importingStripe}>
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${importingStripe ? "animate-spin" : ""}`} /> Stripe-Import
           </Button>
           <Button variant="outline" size="sm" onClick={handleImportAddresses} disabled={importingAddresses}>
             <RefreshCw className={`h-4 w-4 mr-1.5 ${importingAddresses ? "animate-spin" : ""}`} /> Adressen importieren
