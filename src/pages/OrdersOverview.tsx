@@ -281,35 +281,81 @@ const OrdersOverview = () => {
     try {
       let inserted = 0;
       let updated = 0;
+      let deleted = 0;
 
+      // Step 1: Delete duplicates — for each name, keep oldest, delete newer ones
+      const { data: allOrders } = await externalSupabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (allOrders) {
+        const byName: Record<string, any[]> = {};
+        for (const o of allOrders) {
+          const key = o.customer_name?.trim().toLowerCase();
+          if (!key) continue;
+          if (!byName[key]) byName[key] = [];
+          byName[key].push(o);
+        }
+
+        // Delete duplicates (keep the first/oldest one)
+        for (const [, group] of Object.entries(byName)) {
+          if (group.length > 1) {
+            const toDelete = group.slice(1); // keep first (oldest)
+            for (const dup of toDelete) {
+              await externalSupabase.from("orders").delete().eq("id", dup.id);
+              deleted++;
+            }
+          }
+        }
+      }
+
+      // Step 2: Now upsert spreadsheet data — merge into existing or insert new
       for (const row of SPREADSHEET_DATA) {
         const { data: existing } = await externalSupabase
           .from("orders")
           .select("*")
-          .eq("customer_name", row.name)
+          .ilike("customer_name", row.name)
           .maybeSingle();
 
-        const orderData: Record<string, any> = {
-          customer_name: row.name,
-          customer_email: row.email || existing?.customer_email || "",
-          phone_model: row.phone || existing?.phone_model || "",
-          quantity: row.qty,
-          amount_total: Math.round(row.price * 100),
-          currency: "chf",
-          delivery_method: row.delivery,
-          order_status: "paid",
-          shipping_address_line1: ("address" in row && row.address) || existing?.shipping_address_line1 || "",
-          shipping_city: ("city" in row ? row.city : "") || existing?.shipping_city || "",
-          shipping_postal_code: ("postal" in row ? row.postal : "") || existing?.shipping_postal_code || "",
-          shipping_country: ("country" in row ? row.country : "") || existing?.shipping_country || "",
-          shipping_name: ("shipping_name" in row ? row.shipping_name : "") || existing?.shipping_name || "",
-        };
-
         if (existing) {
-          const { error } = await externalSupabase.from("orders").update(orderData).eq("id", existing.id);
-          if (error) { console.error("Update error:", error); continue; }
-          updated++;
+          // Only update fields that are missing or empty in existing record
+          const updates: Record<string, any> = {};
+          if (!existing.customer_email && row.email) updates.customer_email = row.email;
+          if (!existing.phone_model && row.phone) updates.phone_model = row.phone;
+          if (!existing.quantity || existing.quantity === 1) updates.quantity = row.qty;
+          if (!existing.amount_total) updates.amount_total = Math.round(row.price * 100);
+          if (!existing.delivery_method) updates.delivery_method = row.delivery;
+          if (!existing.shipping_address_line1 && "address" in row && row.address) updates.shipping_address_line1 = row.address;
+          if (!existing.shipping_city && "city" in row) updates.shipping_city = row.city;
+          if (!existing.shipping_postal_code && "postal" in row) updates.shipping_postal_code = row.postal;
+          if (!existing.shipping_country && "country" in row) updates.shipping_country = row.country;
+          if (!existing.shipping_name && "shipping_name" in row) updates.shipping_name = row.shipping_name;
+
+          // Always fill these if they were empty
+          if (row.email && !existing.customer_email) updates.customer_email = row.email;
+          if (row.phone && !existing.phone_model) updates.phone_model = row.phone;
+
+          if (Object.keys(updates).length > 0) {
+            await externalSupabase.from("orders").update(updates).eq("id", existing.id);
+            updated++;
+          }
         } else {
+          const orderData: Record<string, any> = {
+            customer_name: row.name,
+            customer_email: row.email || "",
+            phone_model: row.phone || "",
+            quantity: row.qty,
+            amount_total: Math.round(row.price * 100),
+            currency: "chf",
+            delivery_method: row.delivery,
+            order_status: "paid",
+            shipping_address_line1: ("address" in row && row.address) || "",
+            shipping_city: ("city" in row ? row.city : "") || "",
+            shipping_postal_code: ("postal" in row ? row.postal : "") || "",
+            shipping_country: ("country" in row ? row.country : "") || "",
+            shipping_name: ("shipping_name" in row ? row.shipping_name : "") || "",
+          };
           const { error } = await externalSupabase.from("orders").insert(orderData);
           if (error) { console.error("Insert error:", error); continue; }
           inserted++;
@@ -317,7 +363,7 @@ const OrdersOverview = () => {
       }
 
       queryClient.invalidateQueries({ queryKey: ["external-orders"] });
-      toast({ title: "Import abgeschlossen", description: `${inserted} neu, ${updated} aktualisiert.` });
+      toast({ title: "Import abgeschlossen", description: `${deleted} Duplikate gelöscht, ${updated} aktualisiert, ${inserted} neu.` });
     } catch (err: any) {
       toast({ title: "Import-Fehler", description: err.message, variant: "destructive" });
     } finally {
