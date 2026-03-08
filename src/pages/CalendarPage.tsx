@@ -60,6 +60,7 @@ const CalendarPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [eventForm, setEventForm] = useState({
     title: "",
     description: "",
