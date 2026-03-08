@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Users, Trophy } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Plus, Users, Trophy, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 
@@ -69,6 +70,17 @@ const Partners = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["partners"] });
       toast({ title: "Partner updated" });
+    },
+  });
+
+  const deletePartner = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("partners").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast({ title: "Partner gelöscht" });
     },
   });
 
@@ -163,8 +175,9 @@ const Partners = () => {
                   <TableHead>Added By</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Post</TableHead>
-                  <TableHead className="text-center">Days</TableHead>
-                </TableRow>
+                   <TableHead className="text-center">Days</TableHead>
+                   <TableHead className="text-right">Actions</TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPartners.map((p) => {
@@ -211,6 +224,23 @@ const Partners = () => {
                             {days}d ago
                           </Badge>
                         ) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Partner löschen?</AlertDialogTitle>
+                              <AlertDialogDescription>{p.name || p.email} wird unwiderruflich gelöscht.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deletePartner.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Löschen</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   );
