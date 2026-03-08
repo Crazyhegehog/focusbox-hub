@@ -392,14 +392,19 @@ function DayCell({
   items,
   isToday,
   onSelect,
+  onDayClick,
 }: {
   day: Date;
   items: ScheduleItem[];
   isToday: boolean;
   onSelect: (item: ScheduleItem) => void;
+  onDayClick: (day: Date) => void;
 }) {
   return (
-    <Card className={`min-h-[120px] ${isToday ? "border-primary/50 bg-primary/5" : "border-border/40"}`}>
+    <Card
+      className={`min-h-[120px] cursor-pointer transition-colors hover:bg-accent/30 ${isToday ? "border-primary/50 bg-primary/5" : "border-border/40"}`}
+      onClick={() => onDayClick(day)}
+    >
       <CardContent className="p-2">
         <p className={`text-xs font-semibold mb-1 ${isToday ? "text-primary" : "text-muted-foreground"}`}>
           {format(day, "d")}
@@ -408,7 +413,7 @@ function DayCell({
           {items.slice(0, 4).map((item) => (
             <button
               key={item.id}
-              onClick={() => onSelect(item)}
+              onClick={(e) => { e.stopPropagation(); onSelect(item); }}
               className="w-full text-left rounded px-1.5 py-0.5 text-[11px] leading-tight truncate transition-colors hover:bg-accent"
               style={{
                 borderLeft: `2px solid ${
