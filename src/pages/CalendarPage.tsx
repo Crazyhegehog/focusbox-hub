@@ -518,7 +518,7 @@ function DayCell({
             <button
               key={item.id}
               onClick={(e) => { e.stopPropagation(); onSelect(item); }}
-              className="w-full text-left rounded px-1.5 py-0.5 text-[11px] leading-tight truncate transition-colors hover:bg-accent"
+              className="w-full text-left rounded px-1.5 py-0.5 text-[11px] leading-tight transition-colors hover:bg-accent"
               style={{
                 borderLeft: `2px solid ${
                   item.type === "event"
@@ -529,7 +529,12 @@ function DayCell({
                 }`,
               }}
             >
-              {item.title}
+              <div className="flex items-center gap-1">
+                {item.event?.start_time && (
+                  <span className="font-mono text-muted-foreground flex-shrink-0">{item.event.start_time.slice(0, 5)}</span>
+                )}
+                <span className="truncate">{item.title}</span>
+              </div>
             </button>
           ))}
           {items.length > 4 && (
