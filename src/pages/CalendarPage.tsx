@@ -60,6 +60,7 @@ const CalendarPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0);
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [eventForm, setEventForm] = useState({
     title: "",
     description: "",
@@ -310,10 +311,7 @@ const CalendarPage = () => {
           const dayItems = getItemsForDay(day);
           const isToday = isSameDay(day, today);
           return (
-            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} onDayClick={(d) => {
-              setEventForm((c) => ({ ...c, eventDate: format(d, "yyyy-MM-dd") }));
-              setDialogOpen(true);
-            }} />
+            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} onDayClick={(d) => setSelectedDay(d)} />
           );
         })}
 
@@ -329,10 +327,7 @@ const CalendarPage = () => {
           const dayItems = getItemsForDay(day);
           const isToday = isSameDay(day, today);
           return (
-            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} onDayClick={(d) => {
-              setEventForm((c) => ({ ...c, eventDate: format(d, "yyyy-MM-dd") }));
-              setDialogOpen(true);
-            }} />
+            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} onDayClick={(d) => setSelectedDay(d)} />
           );
         })}
       </div>
@@ -396,6 +391,98 @@ const CalendarPage = () => {
                   Delete Event
                 </Button>
               )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Day Detail Sheet */}
+      <Sheet open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
+        <SheetContent className="overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{selectedDay ? format(selectedDay, "EEEE, MMM d, yyyy") : ""}</SheetTitle>
+          </SheetHeader>
+          {selectedDay && (
+            <div className="pt-4 space-y-2">
+              {(() => {
+                const dayItems = getItemsForDay(selectedDay);
+                // Sort: events with time first (by time), then items without time
+                const withTime = dayItems
+                  .filter((i) => i.type === "event" && i.event?.start_time)
+                  .sort((a, b) => (a.event!.start_time! > b.event!.start_time! ? 1 : -1));
+                const withoutTime = dayItems.filter(
+                  (i) => !(i.type === "event" && i.event?.start_time)
+                );
+
+                if (dayItems.length === 0) {
+                  return <p className="text-sm text-muted-foreground">No events or tasks for this day.</p>;
+                }
+
+                return (
+                  <>
+                    {withTime.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => { setSelectedDay(null); setTimeout(() => setSelectedItem(item), 150); }}
+                        className="w-full text-left flex items-start gap-3 rounded-lg border border-border/50 p-3 hover:bg-accent/30 transition-colors"
+                      >
+                        <div className="text-xs font-mono text-muted-foreground pt-0.5 min-w-[50px]">
+                          {item.event!.start_time!.slice(0, 5)}
+                          {item.event!.end_time && (
+                            <span className="block">{item.event!.end_time.slice(0, 5)}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.title}</p>
+                          {item.event && (
+                            <Badge variant="outline" className={`mt-1 text-[10px] ${eventTypeConfig[item.event.type].className}`}>
+                              {eventTypeConfig[item.event.type].label}
+                            </Badge>
+                          )}
+                          {item.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                    {withoutTime.length > 0 && withTime.length > 0 && (
+                      <p className="text-xs font-medium text-muted-foreground pt-2">All day / Tasks</p>
+                    )}
+                    {withoutTime.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => { setSelectedDay(null); setTimeout(() => setSelectedItem(item), 150); }}
+                        className="w-full text-left flex items-start gap-3 rounded-lg border border-border/50 p-3 hover:bg-accent/30 transition-colors"
+                      >
+                        <div className="text-xs text-muted-foreground pt-0.5 min-w-[50px]">
+                          {item.type === "task-due" ? "Due" : item.type === "task-start" ? "Start" : "Event"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{item.title}</p>
+                          {item.status && (
+                            <Badge variant="outline" className="mt-1 text-[10px]">{item.status.replace("_", " ")}</Badge>
+                          )}
+                          {item.project && (
+                            <p className="text-xs text-muted-foreground mt-1">{item.project.name}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-3"
+                      onClick={() => {
+                        setSelectedDay(null);
+                        setEventForm((c) => ({ ...c, eventDate: format(selectedDay, "yyyy-MM-dd") }));
+                        setTimeout(() => setDialogOpen(true), 150);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Event
+                    </Button>
+                  </>
+                );
+              })()}
             </div>
           )}
         </SheetContent>
