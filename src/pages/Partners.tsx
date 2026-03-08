@@ -73,6 +73,17 @@ const Partners = () => {
     },
   });
 
+  const deletePartner = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("partners").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast({ title: "Partner gelöscht" });
+    },
+  });
+
   const getDayCount = (partner: any) => {
     const refDate = partner.last_post_date || partner.signed_date || partner.created_at;
     if (!refDate) return null;
