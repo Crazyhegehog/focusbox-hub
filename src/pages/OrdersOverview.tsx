@@ -279,11 +279,11 @@ const OrdersOverview = () => {
   const handleImportSpreadsheet = async () => {
     setImportingSpreadsheet(true);
     try {
-      let inserted = 0;
-      let updated = 0;
       let deleted = 0;
+      let updated = 0;
+      let inserted = 0;
 
-      // Step 1: Delete duplicates — for each name, keep oldest, delete newer ones
+      // Step 1: Fetch all orders and deduplicate by customer_name
       const { data: allOrders } = await externalSupabase
         .from("orders")
         .select("*")
@@ -298,19 +298,43 @@ const OrdersOverview = () => {
           byName[key].push(o);
         }
 
-        // Delete duplicates (keep the first/oldest one)
         for (const [, group] of Object.entries(byName)) {
-          if (group.length > 1) {
-            const toDelete = group.slice(1); // keep first (oldest)
-            for (const dup of toDelete) {
-              await externalSupabase.from("orders").delete().eq("id", dup.id);
-              deleted++;
+          if (group.length <= 1) continue;
+
+          // Keep the one with the most filled fields, prefer oldest on tie
+          const scored = group.map((o) => ({
+            order: o,
+            score: Object.values(o).filter((v) => v !== null && v !== "" && v !== 0).length,
+          }));
+          scored.sort((a, b) => b.score - a.score || new Date(a.order.created_at).getTime() - new Date(b.order.created_at).getTime());
+
+          const keeper = scored[0].order;
+          const duplicates = scored.slice(1);
+
+          // Merge any missing fields from duplicates into keeper
+          const mergeUpdates: Record<string, any> = {};
+          for (const dup of duplicates) {
+            for (const [key, val] of Object.entries(dup.order)) {
+              if (key === "id" || key === "created_at" || key === "updated_at") continue;
+              if (val && val !== "" && (!keeper[key] || keeper[key] === "" || keeper[key] === null)) {
+                mergeUpdates[key] = val;
+              }
             }
+          }
+
+          if (Object.keys(mergeUpdates).length > 0) {
+            await externalSupabase.from("orders").update(mergeUpdates).eq("id", keeper.id);
+          }
+
+          // Delete duplicates
+          for (const dup of duplicates) {
+            await externalSupabase.from("orders").delete().eq("id", dup.order.id);
+            deleted++;
           }
         }
       }
 
-      // Step 2: Now upsert spreadsheet data — merge into existing or insert new
+      // Step 2: Upsert spreadsheet data
       for (const row of SPREADSHEET_DATA) {
         const { data: existing } = await externalSupabase
           .from("orders")
@@ -318,54 +342,42 @@ const OrdersOverview = () => {
           .ilike("customer_name", row.name)
           .maybeSingle();
 
+        const newData: Record<string, any> = {};
+        if (row.email) newData.customer_email = row.email;
+        if (row.phone) newData.phone_model = row.phone;
+        if (row.qty) newData.quantity = row.qty;
+        if (row.price) newData.amount_total = Math.round(row.price * 100);
+        newData.delivery_method = row.delivery;
+        newData.order_status = "paid";
+        newData.currency = "chf";
+        if ("address" in row && row.address) newData.shipping_address_line1 = row.address;
+        if ("city" in row && row.city) newData.shipping_city = row.city;
+        if ("postal" in row && row.postal) newData.shipping_postal_code = row.postal;
+        if ("country" in row && row.country) newData.shipping_country = row.country;
+        if ("shipping_name" in row && row.shipping_name) newData.shipping_name = row.shipping_name;
+
         if (existing) {
-          // Only update fields that are missing or empty in existing record
+          // Only fill empty fields, don't overwrite existing data
           const updates: Record<string, any> = {};
-          if (!existing.customer_email && row.email) updates.customer_email = row.email;
-          if (!existing.phone_model && row.phone) updates.phone_model = row.phone;
-          if (!existing.quantity || existing.quantity === 1) updates.quantity = row.qty;
-          if (!existing.amount_total) updates.amount_total = Math.round(row.price * 100);
-          if (!existing.delivery_method) updates.delivery_method = row.delivery;
-          if (!existing.shipping_address_line1 && "address" in row && row.address) updates.shipping_address_line1 = row.address;
-          if (!existing.shipping_city && "city" in row) updates.shipping_city = row.city;
-          if (!existing.shipping_postal_code && "postal" in row) updates.shipping_postal_code = row.postal;
-          if (!existing.shipping_country && "country" in row) updates.shipping_country = row.country;
-          if (!existing.shipping_name && "shipping_name" in row) updates.shipping_name = row.shipping_name;
-
-          // Always fill these if they were empty
-          if (row.email && !existing.customer_email) updates.customer_email = row.email;
-          if (row.phone && !existing.phone_model) updates.phone_model = row.phone;
-
+          for (const [k, v] of Object.entries(newData)) {
+            if (v && (!existing[k] || existing[k] === "" || existing[k] === null)) {
+              updates[k] = v;
+            }
+          }
           if (Object.keys(updates).length > 0) {
             await externalSupabase.from("orders").update(updates).eq("id", existing.id);
             updated++;
           }
         } else {
-          const orderData: Record<string, any> = {
-            customer_name: row.name,
-            customer_email: row.email || "",
-            phone_model: row.phone || "",
-            quantity: row.qty,
-            amount_total: Math.round(row.price * 100),
-            currency: "chf",
-            delivery_method: row.delivery,
-            order_status: "paid",
-            shipping_address_line1: ("address" in row && row.address) || "",
-            shipping_city: ("city" in row ? row.city : "") || "",
-            shipping_postal_code: ("postal" in row ? row.postal : "") || "",
-            shipping_country: ("country" in row ? row.country : "") || "",
-            shipping_name: ("shipping_name" in row ? row.shipping_name : "") || "",
-          };
-          const { error } = await externalSupabase.from("orders").insert(orderData);
-          if (error) { console.error("Insert error:", error); continue; }
+          await externalSupabase.from("orders").insert({ customer_name: row.name, ...newData });
           inserted++;
         }
       }
 
       queryClient.invalidateQueries({ queryKey: ["external-orders"] });
-      toast({ title: "Import abgeschlossen", description: `${deleted} Duplikate gelöscht, ${updated} aktualisiert, ${inserted} neu.` });
+      toast({ title: "Bereinigung abgeschlossen", description: `${deleted} Duplikate gelöscht, ${updated} aktualisiert, ${inserted} neu.` });
     } catch (err: any) {
-      toast({ title: "Import-Fehler", description: err.message, variant: "destructive" });
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
     } finally {
       setImportingSpreadsheet(false);
     }
