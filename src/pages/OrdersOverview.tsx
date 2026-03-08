@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Package, Search, MapPin, Mail, Phone, Pencil, Save, X, Truck, ShoppingBag, CheckCircle2, Clock, CreditCard, StickyNote } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Package, Search, MapPin, Mail, Pencil, Save, X, Truck, ShoppingBag, CheckCircle2, Clock, CreditCard, StickyNote, Trash2, Download, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ExternalOrder = {
@@ -48,6 +50,40 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; class
 
 const formatAmount = (amount: number, currency: string = "chf") =>
   new Intl.NumberFormat("de-CH", { style: "currency", currency: currency.toUpperCase() }).format(amount / 100);
+
+const exportOrdersCSV = (orders: ExternalOrder[]) => {
+  const headers = ["Name", "E-Mail", "Modell", "Menge", "Betrag", "Währung", "Versandart", "Status", "Stadt", "PLZ", "Land", "Datum", "Notizen"];
+  const rows = orders.map((o) => [
+    o.customer_name,
+    o.customer_email,
+    o.phone_model || "",
+    o.quantity || 1,
+    ((o.amount_total || 0) / 100).toFixed(2),
+    (o.currency || "chf").toUpperCase(),
+    o.delivery_method === "shipping" ? "Versand" : "Abholung",
+    statusConfig[o.order_status]?.label || o.order_status,
+    o.shipping_city || "",
+    o.shipping_postal_code || "",
+    o.shipping_country || "",
+    new Date(o.created_at).toLocaleDateString("de-CH"),
+    (o.notes || "").replace(/"/g, '""'),
+  ]);
+  const csv = [headers.join(";"), ...rows.map((r) => r.map((v) => `"${v}"`).join(";"))].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `bestellungen-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const getEmailsByStatus = (orders: ExternalOrder[], status: string) => {
+  return orders
+    .filter((o) => o.order_status === status && o.customer_email)
+    .map((o) => o.customer_email)
+    .filter((v, i, a) => a.indexOf(v) === i);
+};
 
 const OrdersOverview = () => {
   const { toast } = useToast();
@@ -96,6 +132,19 @@ const OrdersOverview = () => {
     onError: (err: any) => toast({ title: "Fehler", description: err.message, variant: "destructive" }),
   });
 
+  const deleteOrder = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await externalSupabase.from("orders").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["external-orders"] });
+      setDetailOrder(null);
+      toast({ title: "Bestellung gelöscht" });
+    },
+    onError: (err: any) => toast({ title: "Fehler", description: err.message, variant: "destructive" }),
+  });
+
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       !searchTerm ||
@@ -107,7 +156,6 @@ const OrdersOverview = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // KPIs
   const totalOrders = orders.length;
   const totalRevenue = orders.reduce((sum, o) => sum + (o.amount_total || 0), 0);
   const totalUnits = orders.reduce((sum, o) => sum + (o.quantity || 1), 0);
@@ -118,12 +166,68 @@ const OrdersOverview = () => {
     return acc;
   }, {} as Record<string, number>);
 
+  const handleSendEmail = (status: string) => {
+    const emails = getEmailsByStatus(orders, status);
+    if (emails.length === 0) {
+      toast({ title: "Keine E-Mails", description: `Keine Kunden mit Status "${statusConfig[status]?.label || status}" gefunden.` });
+      return;
+    }
+    const mailto = `mailto:?bcc=${emails.join(",")}`;
+    window.open(mailto, "_blank");
+    toast({ title: `${emails.length} Empfänger`, description: `E-Mail-Client geöffnet für "${statusConfig[status]?.label}" Bestellungen.` });
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Bestellungen</h1>
-        <p className="text-muted-foreground font-body mt-1">Admin-Dashboard — Externe Datenbank</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Bestellungen</h1>
+          <p className="text-muted-foreground font-body mt-1">Admin-Dashboard — Externe Datenbank</p>
+        </div>
+        <div className="flex gap-2">
+          {/* Export */}
+          <Button variant="outline" size="sm" onClick={() => { exportOrdersCSV(filteredOrders); toast({ title: "CSV exportiert" }); }}>
+            <Download className="h-4 w-4 mr-1.5" /> Export
+          </Button>
+          {/* Group Email */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Send className="h-4 w-4 mr-1.5" /> Gruppen-E-Mail
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>E-Mail an Gruppe senden</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {ORDER_STATUSES.map((s) => {
+                const count = statusCounts[s] || 0;
+                return (
+                  <DropdownMenuItem key={s} onClick={() => handleSendEmail(s)} disabled={count === 0}>
+                    <span className="flex items-center gap-2 w-full">
+                      {statusConfig[s]?.icon}
+                      <span>{statusConfig[s]?.label}</span>
+                      <Badge variant="secondary" className="ml-auto text-xs">{count}</Badge>
+                    </span>
+                  </DropdownMenuItem>
+                );
+              })}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                const unshipped = orders.filter((o) => o.order_status !== "shipped" && o.order_status !== "delivered" && o.customer_email);
+                const emails = [...new Set(unshipped.map((o) => o.customer_email))];
+                if (emails.length === 0) { toast({ title: "Keine E-Mails" }); return; }
+                window.open(`mailto:?bcc=${emails.join(",")}`, "_blank");
+                toast({ title: `${emails.length} Empfänger`, description: "Alle noch nicht versendeten." });
+              }}>
+                <span className="flex items-center gap-2 w-full">
+                  <Package className="h-3 w-3" />
+                  <span>Alle nicht versendet</span>
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -232,21 +336,44 @@ const OrdersOverview = () => {
                         {new Date(order.created_at).toLocaleDateString("de-CH")}
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={order.order_status}
-                          onValueChange={(v) => updateStatus.mutate({ id: order.id, status: v })}
-                        >
-                          <SelectTrigger className="w-[120px] h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ORDER_STATUSES.map((s) => (
-                              <SelectItem key={s} value={s}>
-                                <span className="flex items-center gap-1.5">{statusConfig[s]?.icon} {statusConfig[s]?.label}</span>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex items-center justify-end gap-1">
+                          <Select
+                            value={order.order_status}
+                            onValueChange={(v) => updateStatus.mutate({ id: order.id, status: v })}
+                          >
+                            <SelectTrigger className="w-[120px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ORDER_STATUSES.map((s) => (
+                                <SelectItem key={s} value={s}>
+                                  <span className="flex items-center gap-1.5">{statusConfig[s]?.icon} {statusConfig[s]?.label}</span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Bestellung löschen?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Bestellung von <strong>{order.customer_name}</strong> wird unwiderruflich gelöscht.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deleteOrder.mutate(order.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Löschen
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -293,16 +420,12 @@ const OrdersOverview = () => {
                 <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                   <span className="text-muted-foreground">Modell</span>
                   <span className="font-medium">{detailOrder.phone_model || "—"}</span>
-
                   <span className="text-muted-foreground">Menge</span>
                   <span className="font-medium">{detailOrder.quantity || 1}</span>
-
                   <span className="text-muted-foreground">Betrag</span>
                   <span className="font-medium">{formatAmount(detailOrder.amount_total || 0, detailOrder.currency || "chf")}</span>
-
                   <span className="text-muted-foreground">E-Mail</span>
                   <span className="truncate">{detailOrder.customer_email}</span>
-
                   <span className="text-muted-foreground">Versandart</span>
                   <span className="font-medium">{detailOrder.delivery_method === "shipping" ? "Versand" : "Abholung"}</span>
                 </div>
@@ -363,6 +486,31 @@ const OrdersOverview = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Delete in detail */}
+                <div className="pt-3 border-t">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="w-full">
+                        <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Bestellung löschen
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Bestellung löschen?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Bestellung von <strong>{detailOrder.customer_name}</strong> wird unwiderruflich gelöscht.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteOrder.mutate(detailOrder.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Löschen
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
 
                 <p className="text-xs text-muted-foreground pt-2">
                   Erstellt: {new Date(detailOrder.created_at).toLocaleString("de-CH")}
