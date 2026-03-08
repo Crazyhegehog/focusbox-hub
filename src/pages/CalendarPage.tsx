@@ -202,11 +202,24 @@ const CalendarPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
-          <p className="text-muted-foreground mt-1">
-            {format(days[0], "MMM d")} – {format(days[13], "MMM d, yyyy")}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="icon" onClick={() => setWeekOffset((o) => o - 1)}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setWeekOffset(0)}>
+              Today
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => setWeekOffset((o) => o + 1)}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
+            <p className="text-muted-foreground mt-1">
+              {format(days[0], "MMM d")} – {format(days[13], "MMM d, yyyy")}
+            </p>
+          </div>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
