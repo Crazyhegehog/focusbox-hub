@@ -390,6 +390,9 @@ const OrdersOverview = () => {
           <p className="text-muted-foreground font-body mt-1">Admin-Dashboard — Externe Datenbank</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleImportSpreadsheet} disabled={importingSpreadsheet}>
+            <Download className={`h-4 w-4 mr-1.5 ${importingSpreadsheet ? "animate-spin" : ""}`} /> Excel-Import
+          </Button>
           <Button variant="outline" size="sm" onClick={handleImportAddresses} disabled={importingAddresses}>
             <RefreshCw className={`h-4 w-4 mr-1.5 ${importingAddresses ? "animate-spin" : ""}`} /> Adressen importieren
           </Button>
