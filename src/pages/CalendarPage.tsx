@@ -95,6 +95,7 @@ const CalendarPage = () => {
   const createEvent = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("calendar_events").insert({
+        user_id: user!.id,
         title: eventForm.title,
         description: eventForm.description || null,
         event_date: eventForm.eventDate,
