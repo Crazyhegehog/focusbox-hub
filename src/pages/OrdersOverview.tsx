@@ -130,7 +130,31 @@ const OrdersOverview = () => {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as ExternalOrder[];
+      // Filter out entries with null customer_name and deduplicate by name
+      const valid = (data || []).filter((o: any) => o.customer_name);
+      const seen = new Map<string, any>();
+      const deduped: any[] = [];
+      const toDelete: string[] = [];
+      
+      for (const o of valid) {
+        const key = o.customer_name.trim().toLowerCase();
+        if (seen.has(key)) {
+          // This is a duplicate — mark for deletion
+          toDelete.push(o.id);
+        } else {
+          seen.set(key, o);
+          deduped.push(o);
+        }
+      }
+      
+      // Delete duplicates in background
+      if (toDelete.length > 0) {
+        for (const id of toDelete) {
+          await externalSupabase.from("orders").delete().eq("id", id);
+        }
+      }
+      
+      return deduped as ExternalOrder[];
     },
   });
 
