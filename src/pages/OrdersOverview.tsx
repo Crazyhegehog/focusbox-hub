@@ -276,6 +276,55 @@ const OrdersOverview = () => {
     }
   };
 
+  const handleImportSpreadsheet = async () => {
+    setImportingSpreadsheet(true);
+    try {
+      let inserted = 0;
+      let updated = 0;
+
+      for (const row of SPREADSHEET_DATA) {
+        const { data: existing } = await externalSupabase
+          .from("orders")
+          .select("*")
+          .eq("customer_name", row.name)
+          .maybeSingle();
+
+        const orderData: Record<string, any> = {
+          customer_name: row.name,
+          customer_email: row.email || existing?.customer_email || "",
+          phone_model: row.phone || existing?.phone_model || "",
+          quantity: row.qty,
+          amount_total: Math.round(row.price * 100),
+          currency: "chf",
+          delivery_method: row.delivery,
+          order_status: "paid",
+          shipping_address_line1: ("address" in row && row.address) || existing?.shipping_address_line1 || "",
+          shipping_city: ("city" in row ? row.city : "") || existing?.shipping_city || "",
+          shipping_postal_code: ("postal" in row ? row.postal : "") || existing?.shipping_postal_code || "",
+          shipping_country: ("country" in row ? row.country : "") || existing?.shipping_country || "",
+          shipping_name: ("shipping_name" in row ? row.shipping_name : "") || existing?.shipping_name || "",
+        };
+
+        if (existing) {
+          const { error } = await externalSupabase.from("orders").update(orderData).eq("id", existing.id);
+          if (error) { console.error("Update error:", error); continue; }
+          updated++;
+        } else {
+          const { error } = await externalSupabase.from("orders").insert(orderData);
+          if (error) { console.error("Insert error:", error); continue; }
+          inserted++;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["external-orders"] });
+      toast({ title: "Import abgeschlossen", description: `${inserted} neu, ${updated} aktualisiert.` });
+    } catch (err: any) {
+      toast({ title: "Import-Fehler", description: err.message, variant: "destructive" });
+    } finally {
+      setImportingSpreadsheet(false);
+    }
+  };
+
   const startEditing = (order: ExternalOrder) => {
     setEditingInfo(true);
     setEditValues({
