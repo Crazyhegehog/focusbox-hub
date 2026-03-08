@@ -151,7 +151,7 @@ const CalendarPage = () => {
     projects.find((p) => p.id === projectId) || null;
 
   // Build 14 days
-  const days = Array.from({ length: 14 }, (_, i) => addDays(startOfDay(new Date()), i));
+  const days = Array.from({ length: 14 }, (_, i) => addDays(startOfDay(new Date()), weekOffset * 14 + i));
 
   // Build all schedule items
   const allItems: ScheduleItem[] = [
