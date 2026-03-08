@@ -120,6 +120,7 @@ const OrdersOverview = () => {
   const [editingInfo, setEditingInfo] = useState(false);
   const [editValues, setEditValues] = useState<Partial<ExternalOrder>>({});
   const [importingAddresses, setImportingAddresses] = useState(false);
+  const [importingSpreadsheet, setImportingSpreadsheet] = useState(false);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["external-orders"],
