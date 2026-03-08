@@ -58,6 +58,7 @@ const CalendarPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0);
   const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [eventForm, setEventForm] = useState({
     title: "",
