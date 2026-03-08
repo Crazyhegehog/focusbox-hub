@@ -90,6 +90,25 @@ const getEmailsByStatus = (orders: ExternalOrder[], status: string) => {
     .filter((v, i, a) => a.indexOf(v) === i);
 };
 
+const SPREADSHEET_DATA = [
+  { name: "Chanelle Ott", delivery: "pickup", email: "chanelle.ott@stift.ch", qty: 1, price: 24, phone: "iPhone 13", address: "" },
+  { name: "Viviana Lindemann", delivery: "pickup", email: "viviana.lindemann@stift.ch", qty: 1, price: 24, phone: "iPhone 13", address: "Sternenweg 8 Einsiedeln" },
+  { name: "Josephine Troxler", delivery: "pickup", email: "josephine.troxler@stift.ch", qty: 1, price: 24, phone: "iPhone 14", address: "Hungerstrasse 29 Wollerau" },
+  { name: "Chris Hein", delivery: "pickup", email: "", qty: 1, price: 24, phone: "", address: "Etzelstrasse 52 Schindellegi" },
+  { name: "Markus Ebner", delivery: "pickup", email: "", qty: 1, price: 35, phone: "iPhone 14 Pro", address: "Hurtnerstrasse 94 Hurden" },
+  { name: "Lisa Eitzinger", delivery: "pickup", email: "lisa.eitzinger@stift.ch", qty: 1, price: 24, phone: "", address: "" },
+  { name: "Elika Mkhize", delivery: "pickup", email: "elika.mkhize@stift.ch", qty: 1, price: 24, phone: "iPhone 12 mini", address: "Hügelweg 8 Galgenen" },
+  { name: "Claudia Scholz", delivery: "shipping", email: "scholz-claudia@gmx.de", qty: 1, price: 29, phone: "iPhone 14 Pro", address: "Grotzenmühlestrasse 5b", postal: "8840", city: "Einsiedeln" },
+  { name: "Calogero Rinaldi", delivery: "shipping", email: "calogero.rinaldi@gmail.com", qty: 1, price: 34, phone: "iPhone 13 Pro Max", address: "Walterswilerstrasse 1h", postal: "5745", city: "Safenwil", country: "CH", shipping_name: "Calogero Rinaldi" },
+  { name: "Massad Lili-Rose", delivery: "shipping", email: "lili.rose.massad@gmail.com", qty: 1, price: 34, phone: "iPhone 16 Pro", address: "Sur les Moulins 13", postal: "1026", city: "Denges", country: "CH", shipping_name: "Massad Lili-Rose" },
+  { name: "Gian Bissig", delivery: "pickup", email: "gian.bissig@icloud.com", qty: 1, price: 23.2, phone: "iPhone 15", address: "" },
+  { name: "Anita Brunner", delivery: "shipping", email: "anita_brunner@yahoo.com", qty: 3, price: 92, phone: "iPhone 15+", address: "Seegartenstrasse 67", postal: "8813", city: "Horgen" },
+  { name: "Anna Piattini", delivery: "pickup", email: "anna.piattini@stift.ch", qty: 1, price: 29, phone: "iPhone 15 Pro", address: "Bifangweg 3", postal: "8836", city: "Bennau" },
+  { name: "Annegret Ziltener", delivery: "shipping", email: "annegret.ziltener@bluewin.ch", qty: 1, price: 34, phone: "iPhone 17 Pro", address: "Im Seehof 6", postal: "8852", city: "Altendorf", country: "CH", shipping_name: "Annegret Ziltener" },
+  { name: "Carine Brändle", delivery: "shipping", email: "carine_braendle@hotmail.com", qty: 2, price: 63, phone: "iPhone 14/15", address: "Hürdweg 27b", postal: "8854", city: "Galgenen", shipping_name: "Carine Brändle" },
+] as const;
+
+
 const OrdersOverview = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
