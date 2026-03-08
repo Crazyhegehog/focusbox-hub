@@ -2,17 +2,14 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addDays,
-  endOfMonth,
   endOfDay,
   format,
   isSameDay,
   isWithinInterval,
   parseISO,
   startOfDay,
-  startOfMonth,
 } from "date-fns";
 import {
-  CalendarDays,
   Clock,
   Flag,
   Plus,
@@ -24,7 +21,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -51,8 +47,6 @@ const CalendarPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [visibleMonth, setVisibleMonth] = useState<Date>(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [eventForm, setEventForm] = useState({
     title: "",
@@ -101,6 +95,7 @@ const CalendarPage = () => {
   const createEvent = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("calendar_events").insert({
+        user_id: user!.id,
         title: eventForm.title,
         description: eventForm.description || null,
         event_date: eventForm.eventDate,
@@ -118,7 +113,7 @@ const CalendarPage = () => {
       setEventForm({
         title: "",
         description: "",
-        eventDate: format(selectedDate, "yyyy-MM-dd"),
+        eventDate: format(new Date(), "yyyy-MM-dd"),
         startTime: "",
         endTime: "",
         type: "other",
@@ -142,19 +137,32 @@ const CalendarPage = () => {
   const getProject = (projectId: string | null) =>
     projects.find((project) => project.id === projectId) || null;
 
-  const selectedDayTasks = todos.filter((todo) => {
-    const startMatch = todo.start_date && isSameDay(parseISO(todo.start_date), selectedDate);
-    const dueMatch = todo.due_date && isSameDay(parseISO(todo.due_date), selectedDate);
-    return !!startMatch || !!dueMatch;
+  // Get next 2 weeks range
+  const nextTwoWeeksStart = startOfDay(new Date());
+  const nextTwoWeeksEnd = endOfDay(addDays(new Date(), 13));
+
+  // Filter todos for next 2 weeks
+  const upcomingTodos = todos.filter((todo) => {
+    const dates = [todo.start_date, todo.due_date].filter(Boolean) as string[];
+    return dates.some((date) => 
+      isWithinInterval(parseISO(date), {
+        start: nextTwoWeeksStart,
+        end: nextTwoWeeksEnd,
+      })
+    );
   });
 
-  const selectedDayEvents = events.filter((event) =>
-    isSameDay(parseISO(event.event_date), selectedDate)
+  // Filter events for next 2 weeks
+  const upcomingEvents = events.filter((event) =>
+    isWithinInterval(parseISO(event.event_date), {
+      start: nextTwoWeeksStart,
+      end: nextTwoWeeksEnd,
+    })
   );
 
-  const scheduledTodos = todos.filter((todo) => todo.start_date || todo.due_date);
+  // Build combined schedule items
   const scheduleItems = [
-    ...scheduledTodos.flatMap((todo) => {
+    ...upcomingTodos.flatMap((todo) => {
       const items: Array<{
         id: string;
         date: string;
@@ -191,7 +199,7 @@ const CalendarPage = () => {
 
       return items;
     }),
-    ...events.map((event) => ({
+    ...upcomingEvents.map((event) => ({
       id: event.id,
       date: event.event_date,
       type: "event" as const,
@@ -203,36 +211,10 @@ const CalendarPage = () => {
     })),
   ].sort((left, right) => left.date.localeCompare(right.date));
 
-  const monthRange = {
-    start: startOfMonth(visibleMonth),
-    end: endOfMonth(visibleMonth),
-  };
-
-  const monthTaskCount = scheduledTodos.filter((todo) => {
-    const relevantDates = [todo.start_date, todo.due_date].filter(Boolean) as string[];
-    return relevantDates.some((date) => isWithinInterval(parseISO(date), monthRange));
-  }).length;
-
-  const monthEventCount = events.filter((event) =>
-    isWithinInterval(parseISO(event.event_date), monthRange)
-  ).length;
-
   const overdueTasks = todos.filter((todo) => {
     if (!todo.due_date || todo.status === "completed") return false;
     return parseISO(todo.due_date) < new Date();
   }).length;
-
-  const taskDates = scheduledTodos.flatMap((todo) =>
-    [todo.start_date, todo.due_date].filter(Boolean).map((date) => parseISO(date!))
-  );
-  const eventDates = events.map((event) => parseISO(event.event_date));
-  const nextTwoWeeksRange = {
-    start: startOfDay(new Date()),
-    end: endOfDay(addDays(new Date(), 13)),
-  };
-  const nextTwoWeeksItems = scheduleItems.filter((item) =>
-    isWithinInterval(parseISO(item.date), nextTwoWeeksRange)
-  );
 
   return (
     <div className="space-y-6">
@@ -240,7 +222,7 @@ const CalendarPage = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
           <p className="text-muted-foreground font-body mt-1">
-            View all scheduled tasks and add standalone events
+            Next 14 days - scheduled tasks and events
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -249,7 +231,7 @@ const CalendarPage = () => {
               onClick={() =>
                 setEventForm((current) => ({
                   ...current,
-                  eventDate: format(selectedDate, "yyyy-MM-dd"),
+                  eventDate: format(new Date(), "yyyy-MM-dd"),
                 }))
               }
             >
@@ -359,17 +341,11 @@ const CalendarPage = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Scheduled tasks this month</p>
-            <p className="mt-2 text-3xl font-bold">{monthTaskCount}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Events this month</p>
-            <p className="mt-2 text-3xl font-bold">{monthEventCount}</p>
+            <p className="text-sm text-muted-foreground">Scheduled items</p>
+            <p className="mt-2 text-3xl font-bold">{scheduleItems.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -380,145 +356,16 @@ const CalendarPage = () => {
         </Card>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5" />
-              Schedule overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              month={visibleMonth}
-              onMonthChange={setVisibleMonth}
-              modifiers={{
-                task: taskDates,
-                event: eventDates,
-              }}
-              modifiersClassNames={{
-                task: "bg-warning/10 font-semibold text-foreground",
-                event: "border border-info/40",
-              }}
-              className="rounded-md border border-border/60 p-5"
-              classNames={{
-                months: "flex w-full",
-                month: "w-full space-y-6",
-                table: "w-full border-collapse",
-                head_row: "grid grid-cols-7",
-                row: "mt-3 grid grid-cols-7",
-                head_cell: "h-10 text-center text-sm font-medium text-muted-foreground",
-                cell: "h-24 p-1 text-left align-top",
-                day: "h-full w-full justify-start rounded-xl px-2 py-2 text-left text-sm font-medium",
-              }}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{format(selectedDate, "EEEE, MMMM d")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="mb-2 text-sm font-medium">Tasks</p>
-              <div className="space-y-2">
-                {selectedDayTasks.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No tasks on this date</p>
-                ) : (
-                  selectedDayTasks.map((todo) => {
-                    const project = getProject(todo.project_id);
-                    return (
-                      <div key={todo.id} className="rounded-lg border border-border/60 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-medium">{todo.title}</p>
-                          <Badge variant="outline">{todo.status.replace("_", " ")}</Badge>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2 flex-wrap">
-                          {todo.start_date && (
-                            <Badge variant="outline" className="gap-1">
-                              <Flag className="h-3 w-3" />
-                              Start {todo.start_date}
-                            </Badge>
-                          )}
-                          {todo.due_date && (
-                            <Badge variant="outline" className="gap-1">
-                              <Clock className="h-3 w-3" />
-                              Due {todo.due_date}
-                            </Badge>
-                          )}
-                          {project && (
-                            <Badge variant="outline">{project.name}</Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-2 text-sm font-medium">Events</p>
-              <div className="space-y-2">
-                {selectedDayEvents.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No events on this date</p>
-                ) : (
-                  selectedDayEvents.map((event) => {
-                    const config = eventTypeConfig[event.type];
-                    return (
-                      <div key={event.id} className="rounded-lg border border-border/60 p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="font-medium">{event.title}</p>
-                            {event.description && (
-                              <p className="text-sm text-muted-foreground">
-                                {event.description}
-                              </p>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => deleteEvent.mutate(event.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className={config.className}>
-                            {config.label}
-                          </Badge>
-                          {event.start_time && (
-                            <Badge variant="outline">
-                              {event.start_time.slice(0, 5)}
-                              {event.end_time ? ` - ${event.end_time.slice(0, 5)}` : ""}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Next 14 Days</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {nextTwoWeeksItems.length === 0 ? (
-            <p className="text-muted-foreground">No scheduled tasks or events in the next two weeks</p>
+          {scheduleItems.length === 0 ? (
+            <p className="text-muted-foreground">No scheduled tasks or events</p>
           ) : (
-            nextTwoWeeksItems.map((item) => {
-              if (item.type === "event") {
+            scheduleItems.map((item) => {
+              if ("event" in item && item.event) {
                 const event = item.event as CalendarEvent;
                 const config = eventTypeConfig[event.type];
                 return (
@@ -536,9 +383,18 @@ const CalendarPage = () => {
                         <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                       )}
                     </div>
-                    <Badge variant="outline" className={config.className}>
-                      {config.label}
-                    </Badge>
+                    <div className="flex gap-2">
+                      <Badge variant="outline" className={config.className}>
+                        {config.label}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteEvent.mutate(event.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 );
               }

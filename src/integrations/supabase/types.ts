@@ -93,6 +93,7 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["calendar_event_type"]
           updated_at: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -106,6 +107,7 @@ export type Database = {
           title: string
           type?: Database["public"]["Enums"]["calendar_event_type"]
           updated_at?: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -119,16 +121,9 @@ export type Database = {
           title?: string
           type?: Database["public"]["Enums"]["calendar_event_type"]
           updated_at?: string
+          user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "calendar_events_related_todo_id_fkey"
-            columns: ["related_todo_id"]
-            isOneToOne: false
-            referencedRelation: "todos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       email_templates: {
         Row: {
@@ -616,65 +611,27 @@ export type Database = {
       }
       todo_projects: {
         Row: {
-          color: string
           created_at: string
-          created_by: string
           description: string | null
           id: string
           name: string
           updated_at: string
         }
         Insert: {
-          color?: string
           created_at?: string
-          created_by: string
           description?: string | null
           id?: string
           name: string
           updated_at?: string
         }
         Update: {
-          color?: string
           created_at?: string
-          created_by?: string
           description?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
         Relationships: []
-      }
-      todo_notes: {
-        Row: {
-          content: string
-          created_at: string
-          created_by: string
-          id: string
-          todo_id: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          created_by: string
-          id?: string
-          todo_id: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          created_by?: string
-          id?: string
-          todo_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "todo_notes_todo_id_fkey"
-            columns: ["todo_id"]
-            isOneToOne: false
-            referencedRelation: "todos"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       todo_subtasks: {
         Row: {
@@ -710,13 +667,11 @@ export type Database = {
       }
       todos: {
         Row: {
-          completed_at: string | null
           created_at: string
           created_by: string
           description: string | null
           due_date: string | null
           id: string
-          priority: Database["public"]["Enums"]["task_priority"]
           project_id: string | null
           responsible_id: string | null
           start_date: string | null
@@ -725,13 +680,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          completed_at?: string | null
           created_at?: string
           created_by: string
           description?: string | null
           due_date?: string | null
           id?: string
-          priority?: Database["public"]["Enums"]["task_priority"]
           project_id?: string | null
           responsible_id?: string | null
           start_date?: string | null
@@ -740,13 +693,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          completed_at?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
           due_date?: string | null
           id?: string
-          priority?: Database["public"]["Enums"]["task_priority"]
           project_id?: string | null
           responsible_id?: string | null
           start_date?: string | null
