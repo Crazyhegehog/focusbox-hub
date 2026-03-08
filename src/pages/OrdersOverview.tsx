@@ -128,31 +128,79 @@ const OrdersOverview = () => {
       const { data, error } = await externalSupabase
         .from("orders")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
       if (error) throw error;
-      // Filter out entries with null customer_name and deduplicate by name
-      const valid = (data || []).filter((o: any) => o.customer_name);
+      const all = data || [];
+      
+      // Separate named entries and null-name (Stripe-only) entries
+      const named = all.filter((o: any) => o.customer_name);
+      const unnamed = all.filter((o: any) => !o.customer_name);
+      
+      // Build email lookup for named entries
+      const byEmail = new Map<string, any>();
+      for (const o of named) {
+        if (o.customer_email) byEmail.set(o.customer_email.trim().toLowerCase(), o);
+      }
+      
+      // Merge data from unnamed Stripe entries into named ones, then delete unnamed
+      const toDeleteIds: string[] = [];
+      for (const u of unnamed) {
+        const email = u.customer_email?.trim().toLowerCase();
+        const match = email ? byEmail.get(email) : null;
+        if (match) {
+          // Merge missing fields from Stripe entry into the named entry
+          const mergeUpdates: Record<string, any> = {};
+          for (const [key, val] of Object.entries(u)) {
+            if (["id", "created_at", "updated_at", "customer_name"].includes(key)) continue;
+            if (val && val !== "" && val !== 0 && (!match[key] || match[key] === "" || match[key] === null)) {
+              mergeUpdates[key] = val;
+            }
+          }
+          // Always prefer earliest created_at (Stripe order date)
+          if (new Date(u.created_at) < new Date(match.created_at)) {
+            mergeUpdates.created_at = u.created_at;
+          }
+          if (Object.keys(mergeUpdates).length > 0) {
+            await externalSupabase.from("orders").update(mergeUpdates).eq("id", match.id);
+            Object.assign(match, mergeUpdates);
+          }
+        }
+        toDeleteIds.push(u.id);
+      }
+      
+      // Deduplicate named entries by name
       const seen = new Map<string, any>();
       const deduped: any[] = [];
-      const toDelete: string[] = [];
-      
-      for (const o of valid) {
+      for (const o of named) {
         const key = o.customer_name.trim().toLowerCase();
         if (seen.has(key)) {
-          // This is a duplicate — mark for deletion
-          toDelete.push(o.id);
+          const existing = seen.get(key);
+          // Merge missing fields
+          const mergeUpdates: Record<string, any> = {};
+          for (const [k, v] of Object.entries(o)) {
+            if (["id", "created_at", "updated_at"].includes(k)) continue;
+            if (v && v !== "" && v !== 0 && (!existing[k] || existing[k] === "" || existing[k] === null)) {
+              mergeUpdates[k] = v;
+            }
+          }
+          if (Object.keys(mergeUpdates).length > 0) {
+            await externalSupabase.from("orders").update(mergeUpdates).eq("id", existing.id);
+            Object.assign(existing, mergeUpdates);
+          }
+          toDeleteIds.push(o.id);
         } else {
           seen.set(key, o);
           deduped.push(o);
         }
       }
       
-      // Delete duplicates in background
-      if (toDelete.length > 0) {
-        for (const id of toDelete) {
-          await externalSupabase.from("orders").delete().eq("id", id);
-        }
+      // Delete all duplicates and unnamed entries in background
+      for (const id of toDeleteIds) {
+        await externalSupabase.from("orders").delete().eq("id", id);
       }
+      
+      // Sort by created_at ascending (oldest first)
+      deduped.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       
       return deduped as ExternalOrder[];
     },
