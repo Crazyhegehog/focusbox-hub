@@ -586,6 +586,9 @@ const OrdersOverview = () => {
           <Button variant="outline" size="sm" onClick={handleImportSpreadsheet} disabled={importingSpreadsheet}>
             <Download className={`h-4 w-4 mr-1.5 ${importingSpreadsheet ? "animate-spin" : ""}`} /> Excel-Import
           </Button>
+          <Button variant="outline" size="sm" onClick={handleImportStripeOrders} disabled={importingStripe}>
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${importingStripe ? "animate-spin" : ""}`} /> Stripe-Import
+          </Button>
           <Button variant="outline" size="sm" onClick={handleImportAddresses} disabled={importingAddresses}>
             <RefreshCw className={`h-4 w-4 mr-1.5 ${importingAddresses ? "animate-spin" : ""}`} /> Adressen importieren
           </Button>
