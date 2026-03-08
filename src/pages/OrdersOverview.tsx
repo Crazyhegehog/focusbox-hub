@@ -518,6 +518,7 @@ const OrdersOverview = () => {
     }
   };
 
+  const startEditing = (order: ExternalOrder) => {
     setEditingInfo(true);
     setEditValues({
       customer_name: order.customer_name,
