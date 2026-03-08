@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { externalSupabase } from "@/integrations/external-supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { Package, Search, MapPin, Mail, Pencil, Save, X, Truck, ShoppingBag, CheckCircle2, Clock, CreditCard, StickyNote, Trash2, Download, Send } from "lucide-react";
+import { Package, Search, MapPin, Mail, Pencil, Save, X, Truck, ShoppingBag, CheckCircle2, Clock, CreditCard, StickyNote, Trash2, Download, Send, RefreshCw, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ExternalOrder = {
@@ -52,7 +54,7 @@ const formatAmount = (amount: number, currency: string = "chf") =>
   new Intl.NumberFormat("de-CH", { style: "currency", currency: currency.toUpperCase() }).format(amount / 100);
 
 const exportOrdersCSV = (orders: ExternalOrder[]) => {
-  const headers = ["Name", "E-Mail", "Modell", "Menge", "Betrag", "Währung", "Versandart", "Status", "Stadt", "PLZ", "Land", "Datum", "Notizen"];
+  const headers = ["Name", "E-Mail", "Modell", "Menge", "Betrag", "Währung", "Versandart", "Status", "Versandname", "Adresse 1", "Adresse 2", "Stadt", "PLZ", "Land", "Datum", "Notizen"];
   const rows = orders.map((o) => [
     o.customer_name,
     o.customer_email,
@@ -62,6 +64,9 @@ const exportOrdersCSV = (orders: ExternalOrder[]) => {
     (o.currency || "chf").toUpperCase(),
     o.delivery_method === "shipping" ? "Versand" : "Abholung",
     statusConfig[o.order_status]?.label || o.order_status,
+    o.shipping_name || "",
+    o.shipping_address_line1 || "",
+    o.shipping_address_line2 || "",
     o.shipping_city || "",
     o.shipping_postal_code || "",
     o.shipping_country || "",
@@ -93,6 +98,9 @@ const OrdersOverview = () => {
   const [detailOrder, setDetailOrder] = useState<ExternalOrder | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [editValues, setEditValues] = useState<Partial<ExternalOrder>>({});
+  const [importingAddresses, setImportingAddresses] = useState(false);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["external-orders"],
@@ -114,6 +122,20 @@ const OrdersOverview = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["external-orders"] });
       toast({ title: "Status aktualisiert" });
+    },
+    onError: (err: any) => toast({ title: "Fehler", description: err.message, variant: "destructive" }),
+  });
+
+  const updateOrder = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Record<string, any> }) => {
+      const { error } = await externalSupabase.from("orders").update(data).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["external-orders"] });
+      setEditingInfo(false);
+      if (detailOrder) setDetailOrder({ ...detailOrder, ...vars.data });
+      toast({ title: "Bestellung aktualisiert" });
     },
     onError: (err: any) => toast({ title: "Fehler", description: err.message, variant: "destructive" }),
   });
@@ -144,6 +166,119 @@ const OrdersOverview = () => {
     },
     onError: (err: any) => toast({ title: "Fehler", description: err.message, variant: "destructive" }),
   });
+
+  const handleImportAddresses = async () => {
+    const ordersWithStripe = orders.filter((o) => o.stripe_session_id && (!o.shipping_address_line1 || o.shipping_address_line1 === ""));
+    if (ordersWithStripe.length === 0) {
+      toast({ title: "Keine Bestellungen", description: "Alle Bestellungen haben bereits Adressen oder keine Stripe Session." });
+      return;
+    }
+
+    setImportingAddresses(true);
+    try {
+      const sessionIds = ordersWithStripe.map((o) => o.stripe_session_id!);
+      const { data, error } = await supabase.functions.invoke("fetch-stripe-addresses", {
+        body: { session_ids: sessionIds },
+      });
+      if (error) throw error;
+
+      const results = data.results || {};
+      let updated = 0;
+
+      for (const order of ordersWithStripe) {
+        const stripeData = results[order.stripe_session_id!];
+        if (!stripeData || stripeData.error) continue;
+
+        const updateData: Record<string, any> = {};
+        if (stripeData.shipping_name) updateData.shipping_name = stripeData.shipping_name;
+        if (stripeData.shipping_address_line1) updateData.shipping_address_line1 = stripeData.shipping_address_line1;
+        if (stripeData.shipping_address_line2) updateData.shipping_address_line2 = stripeData.shipping_address_line2;
+        if (stripeData.shipping_city) updateData.shipping_city = stripeData.shipping_city;
+        if (stripeData.shipping_postal_code) updateData.shipping_postal_code = stripeData.shipping_postal_code;
+        if (stripeData.shipping_country) updateData.shipping_country = stripeData.shipping_country;
+        if (!order.customer_name && stripeData.customer_name) updateData.customer_name = stripeData.customer_name;
+        if (!order.customer_email && stripeData.customer_email) updateData.customer_email = stripeData.customer_email;
+
+        if (Object.keys(updateData).length > 0) {
+          const { error: updateError } = await externalSupabase.from("orders").update(updateData).eq("id", order.id);
+          if (!updateError) updated++;
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["external-orders"] });
+      toast({ title: "Import abgeschlossen", description: `${updated} Bestellungen mit Adressen aktualisiert.` });
+    } catch (err: any) {
+      toast({ title: "Import-Fehler", description: err.message, variant: "destructive" });
+    } finally {
+      setImportingAddresses(false);
+    }
+  };
+
+  const handleImportSingleAddress = async (order: ExternalOrder) => {
+    if (!order.stripe_session_id) {
+      toast({ title: "Keine Stripe Session", description: "Diese Bestellung hat keine Stripe Session ID.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-stripe-addresses", {
+        body: { session_ids: [order.stripe_session_id] },
+      });
+      if (error) throw error;
+
+      const stripeData = data.results?.[order.stripe_session_id];
+      if (!stripeData || stripeData.error) {
+        toast({ title: "Fehler", description: stripeData?.error || "Keine Daten von Stripe", variant: "destructive" });
+        return;
+      }
+
+      const updateData: Record<string, any> = {};
+      if (stripeData.shipping_name) updateData.shipping_name = stripeData.shipping_name;
+      if (stripeData.shipping_address_line1) updateData.shipping_address_line1 = stripeData.shipping_address_line1;
+      if (stripeData.shipping_address_line2) updateData.shipping_address_line2 = stripeData.shipping_address_line2;
+      if (stripeData.shipping_city) updateData.shipping_city = stripeData.shipping_city;
+      if (stripeData.shipping_postal_code) updateData.shipping_postal_code = stripeData.shipping_postal_code;
+      if (stripeData.shipping_country) updateData.shipping_country = stripeData.shipping_country;
+      if (stripeData.customer_name) updateData.customer_name = stripeData.customer_name;
+      if (stripeData.customer_email) updateData.customer_email = stripeData.customer_email;
+
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await externalSupabase.from("orders").update(updateData).eq("id", order.id);
+        if (updateError) throw updateError;
+        queryClient.invalidateQueries({ queryKey: ["external-orders"] });
+        setDetailOrder({ ...order, ...updateData });
+        toast({ title: "Adresse importiert" });
+      } else {
+        toast({ title: "Keine neuen Daten", description: "Stripe hat keine Adressdaten für diese Session." });
+      }
+    } catch (err: any) {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const startEditing = (order: ExternalOrder) => {
+    setEditingInfo(true);
+    setEditValues({
+      customer_name: order.customer_name,
+      customer_email: order.customer_email,
+      phone_model: order.phone_model,
+      quantity: order.quantity,
+      delivery_method: order.delivery_method,
+      shipping_name: order.shipping_name,
+      shipping_address_line1: order.shipping_address_line1,
+      shipping_address_line2: order.shipping_address_line2,
+      shipping_city: order.shipping_city,
+      shipping_postal_code: order.shipping_postal_code,
+      shipping_country: order.shipping_country,
+      pickup_class: order.pickup_class,
+      pickup_email: order.pickup_email,
+    });
+  };
+
+  const saveEditing = () => {
+    if (!detailOrder) return;
+    updateOrder.mutate({ id: detailOrder.id, data: editValues });
+  };
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
@@ -185,12 +320,13 @@ const OrdersOverview = () => {
           <h1 className="text-3xl font-bold tracking-tight">Bestellungen</h1>
           <p className="text-muted-foreground font-body mt-1">Admin-Dashboard — Externe Datenbank</p>
         </div>
-        <div className="flex gap-2">
-          {/* Export */}
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleImportAddresses} disabled={importingAddresses}>
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${importingAddresses ? "animate-spin" : ""}`} /> Adressen importieren
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { exportOrdersCSV(filteredOrders); toast({ title: "CSV exportiert" }); }}>
             <Download className="h-4 w-4 mr-1.5" /> Export
           </Button>
-          {/* Group Email */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -305,7 +441,7 @@ const OrdersOverview = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredOrders.map((order) => (
-                    <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setDetailOrder(order); setEditingNotes(false); setNotesValue(order.notes || ""); }}>
+                    <TableRow key={order.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setDetailOrder(order); setEditingNotes(false); setEditingInfo(false); setNotesValue(order.notes || ""); }}>
                       <TableCell>
                         <div className="font-medium">{order.customer_name}</div>
                         <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
@@ -416,27 +552,137 @@ const OrdersOverview = () => {
                   </Select>
                 </div>
 
-                {/* Order Info */}
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4">
-                  <span className="text-muted-foreground">Modell</span>
-                  <span className="font-medium">{detailOrder.phone_model || "—"}</span>
-                  <span className="text-muted-foreground">Menge</span>
-                  <span className="font-medium">{detailOrder.quantity || 1}</span>
-                  <span className="text-muted-foreground">Betrag</span>
-                  <span className="font-medium">{formatAmount(detailOrder.amount_total || 0, detailOrder.currency || "chf")}</span>
-                  <span className="text-muted-foreground">E-Mail</span>
-                  <span className="truncate">{detailOrder.customer_email}</span>
-                  <span className="text-muted-foreground">Versandart</span>
-                  <span className="font-medium">{detailOrder.delivery_method === "shipping" ? "Versand" : "Abholung"}</span>
+                {/* Editable Info */}
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-muted-foreground font-medium flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5" /> Bestelldetails
+                    </p>
+                    <div className="flex gap-1">
+                      {!editingInfo ? (
+                        <>
+                          <Button size="sm" variant="ghost" onClick={() => startEditing(detailOrder)}>
+                            <Pencil className="h-3 w-3 mr-1" /> Bearbeiten
+                          </Button>
+                          {detailOrder.stripe_session_id && (
+                            <Button size="sm" variant="ghost" onClick={() => handleImportSingleAddress(detailOrder)}>
+                              <RefreshCw className="h-3 w-3 mr-1" /> Stripe
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingInfo(false)}><X className="h-3 w-3" /></Button>
+                          <Button size="sm" onClick={saveEditing} disabled={updateOrder.isPending}>
+                            <Save className="h-3 w-3 mr-1" /> Speichern
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {editingInfo ? (
+                    <div className="space-y-3 pl-1">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Name</Label>
+                          <Input value={editValues.customer_name || ""} onChange={(e) => setEditValues({ ...editValues, customer_name: e.target.value })} className="h-8 text-sm" />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">E-Mail</Label>
+                          <Input value={editValues.customer_email || ""} onChange={(e) => setEditValues({ ...editValues, customer_email: e.target.value })} className="h-8 text-sm" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Modell</Label>
+                          <Input value={editValues.phone_model || ""} onChange={(e) => setEditValues({ ...editValues, phone_model: e.target.value })} className="h-8 text-sm" />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Menge</Label>
+                          <Input type="number" value={editValues.quantity || 1} onChange={(e) => setEditValues({ ...editValues, quantity: parseInt(e.target.value) || 1 })} className="h-8 text-sm" />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Versandart</Label>
+                        <Select value={editValues.delivery_method || "shipping"} onValueChange={(v) => setEditValues({ ...editValues, delivery_method: v })}>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="shipping">Versand</SelectItem>
+                            <SelectItem value="pickup">Abholung</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {editValues.delivery_method === "shipping" && (
+                        <>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Versandname</Label>
+                            <Input value={editValues.shipping_name || ""} onChange={(e) => setEditValues({ ...editValues, shipping_name: e.target.value })} className="h-8 text-sm" />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Adresse 1</Label>
+                            <Input value={editValues.shipping_address_line1 || ""} onChange={(e) => setEditValues({ ...editValues, shipping_address_line1: e.target.value })} className="h-8 text-sm" />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Adresse 2</Label>
+                            <Input value={editValues.shipping_address_line2 || ""} onChange={(e) => setEditValues({ ...editValues, shipping_address_line2: e.target.value })} className="h-8 text-sm" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">PLZ</Label>
+                              <Input value={editValues.shipping_postal_code || ""} onChange={(e) => setEditValues({ ...editValues, shipping_postal_code: e.target.value })} className="h-8 text-sm" />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Stadt</Label>
+                              <Input value={editValues.shipping_city || ""} onChange={(e) => setEditValues({ ...editValues, shipping_city: e.target.value })} className="h-8 text-sm" />
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Land</Label>
+                            <Input value={editValues.shipping_country || ""} onChange={(e) => setEditValues({ ...editValues, shipping_country: e.target.value })} className="h-8 text-sm" />
+                          </div>
+                        </>
+                      )}
+
+                      {editValues.delivery_method === "pickup" && (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Klasse</Label>
+                            <Input value={editValues.pickup_class || ""} onChange={(e) => setEditValues({ ...editValues, pickup_class: e.target.value })} className="h-8 text-sm" />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Abhol-E-Mail</Label>
+                            <Input value={editValues.pickup_email || ""} onChange={(e) => setEditValues({ ...editValues, pickup_email: e.target.value })} className="h-8 text-sm" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 pl-1">
+                      <span className="text-muted-foreground">Name</span>
+                      <span className="font-medium">{detailOrder.customer_name}</span>
+                      <span className="text-muted-foreground">E-Mail</span>
+                      <span className="truncate">{detailOrder.customer_email}</span>
+                      <span className="text-muted-foreground">Modell</span>
+                      <span className="font-medium">{detailOrder.phone_model || "—"}</span>
+                      <span className="text-muted-foreground">Menge</span>
+                      <span className="font-medium">{detailOrder.quantity || 1}</span>
+                      <span className="text-muted-foreground">Betrag</span>
+                      <span className="font-medium">{formatAmount(detailOrder.amount_total || 0, detailOrder.currency || "chf")}</span>
+                      <span className="text-muted-foreground">Versandart</span>
+                      <span className="font-medium">{detailOrder.delivery_method === "shipping" ? "Versand" : "Abholung"}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Shipping or Pickup */}
-                {detailOrder.delivery_method === "shipping" && (
+                {/* Shipping or Pickup (read-only view when not editing) */}
+                {!editingInfo && detailOrder.delivery_method === "shipping" && (
                   <div className="pt-3 border-t">
                     <p className="text-muted-foreground mb-2 flex items-center gap-1.5 font-medium"><MapPin className="h-3.5 w-3.5" /> Lieferadresse</p>
                     <div className="space-y-0.5 pl-5">
                       {detailOrder.shipping_name && <p className="font-medium">{detailOrder.shipping_name}</p>}
-                      <p>{detailOrder.shipping_address_line1}</p>
+                      <p>{detailOrder.shipping_address_line1 || <span className="text-muted-foreground italic">Keine Adresse</span>}</p>
                       {detailOrder.shipping_address_line2 && <p>{detailOrder.shipping_address_line2}</p>}
                       <p>{[detailOrder.shipping_postal_code, detailOrder.shipping_city].filter(Boolean).join(" ")}</p>
                       {detailOrder.shipping_country && <p>{detailOrder.shipping_country}</p>}
@@ -444,7 +690,7 @@ const OrdersOverview = () => {
                   </div>
                 )}
 
-                {detailOrder.delivery_method === "pickup" && (
+                {!editingInfo && detailOrder.delivery_method === "pickup" && (
                   <div className="pt-3 border-t">
                     <p className="text-muted-foreground mb-2 flex items-center gap-1.5 font-medium"><ShoppingBag className="h-3.5 w-3.5" /> Abholung</p>
                     <div className="space-y-0.5 pl-5">
@@ -487,7 +733,7 @@ const OrdersOverview = () => {
                   </div>
                 )}
 
-                {/* Delete in detail */}
+                {/* Delete */}
                 <div className="pt-3 border-t">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
