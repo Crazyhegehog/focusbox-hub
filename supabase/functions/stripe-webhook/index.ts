@@ -90,15 +90,15 @@ Deno.serve(async (req) => {
       console.log("Shipping details:", JSON.stringify(session.shipping_details));
 
       // Build product name from line items
-      const productNames = lineItems.data
+      const productNames = (lineItems.data as Array<{price?: {product?: Stripe.Product}; quantity?: number; description?: string}>)
         .map((item) => {
           const product = item.price?.product as Stripe.Product;
           return product?.name || item.description || "Unknown Product";
         })
         .join(", ");
 
-      const totalQuantity = lineItems.data.reduce(
-        (sum, item) => sum + (item.quantity || 1),
+      const totalQuantity = (lineItems.data as Array<{quantity?: number}>).reduce(
+        (sum: number, item) => sum + (item.quantity || 1),
         0
       );
 
