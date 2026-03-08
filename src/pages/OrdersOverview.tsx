@@ -148,6 +148,7 @@ const OrdersOverview = () => {
   const totalOrders = validOrders.length;
   const toShip = validOrders.filter((o) => o.status !== "sent").length;
   const totalRevenue = validOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0);
+  const revenueCurrency = validOrders[0]?.currency || "chf";
 
   const phoneSizeCounts = validOrders
     .filter((o) => o.status !== "sent")
