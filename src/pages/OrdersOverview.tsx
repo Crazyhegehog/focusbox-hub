@@ -208,7 +208,7 @@ const OrdersOverview = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-bold">{formatAmount(totalRevenue)}</p></CardContent>
+          <CardContent><p className="text-3xl font-bold">{formatAmount(totalRevenue, revenueCurrency)}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Phone Sizes Needed</CardTitle></CardHeader>
