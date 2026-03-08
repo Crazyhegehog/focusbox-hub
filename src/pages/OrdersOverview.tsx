@@ -146,7 +146,7 @@ const OrdersOverview = () => {
   });
 
   const totalOrders = validOrders.length;
-  const toShip = validOrders.filter((o) => o.status !== "sent").length;
+  const toShip = validOrders.filter((o) => o.status !== "sent").reduce((sum, o) => sum + (o.quantity || 1), 0);
   const totalRevenue = validOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0);
   const revenueCurrency = validOrders[0]?.currency || "chf";
 
