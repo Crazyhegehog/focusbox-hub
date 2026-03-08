@@ -327,10 +327,7 @@ const CalendarPage = () => {
           const dayItems = getItemsForDay(day);
           const isToday = isSameDay(day, today);
           return (
-            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} onDayClick={(d) => {
-              setEventForm((c) => ({ ...c, eventDate: format(d, "yyyy-MM-dd") }));
-              setDialogOpen(true);
-            }} />
+            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} onDayClick={(d) => setSelectedDay(d)} />
           );
         })}
       </div>
