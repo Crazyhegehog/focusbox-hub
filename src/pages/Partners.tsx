@@ -175,8 +175,9 @@ const Partners = () => {
                   <TableHead>Added By</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Post</TableHead>
-                  <TableHead className="text-center">Days</TableHead>
-                </TableRow>
+                   <TableHead className="text-center">Days</TableHead>
+                   <TableHead className="text-right">Actions</TableHead>
+                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPartners.map((p) => {
