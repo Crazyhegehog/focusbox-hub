@@ -2,10 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addDays,
-  endOfDay,
   format,
   isSameDay,
-  isWithinInterval,
   parseISO,
   startOfDay,
 } from "date-fns";
@@ -21,10 +19,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 
 type Todo = Tables<"todos">;
@@ -32,10 +31,7 @@ type CalendarEvent = Tables<"calendar_events">;
 type TodoProject = Tables<"todo_projects">;
 type CalendarEventType = Enums<"calendar_event_type">;
 
-const eventTypeConfig: Record<
-  CalendarEventType,
-  { label: string; className: string }
-> = {
+const eventTypeConfig: Record<CalendarEventType, { label: string; className: string }> = {
   meeting: { label: "Meeting", className: "bg-info/15 text-info border-info/30" },
   deadline: { label: "Deadline", className: "bg-destructive/15 text-destructive border-destructive/30" },
   reminder: { label: "Reminder", className: "bg-warning/15 text-warning border-warning/30" },
@@ -43,11 +39,23 @@ const eventTypeConfig: Record<
   other: { label: "Other", className: "bg-muted text-muted-foreground border-border" },
 };
 
+type ScheduleItem = {
+  id: string;
+  date: string;
+  type: "task-start" | "task-due" | "event";
+  title: string;
+  description: string | null;
+  project: TodoProject | null;
+  status: Todo["status"] | null;
+  event?: CalendarEvent;
+};
+
 const CalendarPage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<ScheduleItem | null>(null);
   const [eventForm, setEventForm] = useState({
     title: "",
     description: "",
@@ -130,49 +138,21 @@ const CalendarPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar_events"] });
+      setSelectedItem(null);
       toast({ title: "Event deleted" });
     },
   });
 
   const getProject = (projectId: string | null) =>
-    projects.find((project) => project.id === projectId) || null;
+    projects.find((p) => p.id === projectId) || null;
 
-  // Get next 2 weeks range
-  const nextTwoWeeksStart = startOfDay(new Date());
-  const nextTwoWeeksEnd = endOfDay(addDays(new Date(), 13));
+  // Build 14 days
+  const days = Array.from({ length: 14 }, (_, i) => addDays(startOfDay(new Date()), i));
 
-  // Filter todos for next 2 weeks
-  const upcomingTodos = todos.filter((todo) => {
-    const dates = [todo.start_date, todo.due_date].filter(Boolean) as string[];
-    return dates.some((date) => 
-      isWithinInterval(parseISO(date), {
-        start: nextTwoWeeksStart,
-        end: nextTwoWeeksEnd,
-      })
-    );
-  });
-
-  // Filter events for next 2 weeks
-  const upcomingEvents = events.filter((event) =>
-    isWithinInterval(parseISO(event.event_date), {
-      start: nextTwoWeeksStart,
-      end: nextTwoWeeksEnd,
-    })
-  );
-
-  // Build combined schedule items
-  const scheduleItems = [
-    ...upcomingTodos.flatMap((todo) => {
-      const items: Array<{
-        id: string;
-        date: string;
-        type: "task-start" | "task-due";
-        title: string;
-        description: string | null;
-        project: TodoProject | null;
-        status: Todo["status"];
-      }> = [];
-
+  // Build all schedule items
+  const allItems: ScheduleItem[] = [
+    ...todos.flatMap((todo) => {
+      const items: ScheduleItem[] = [];
       if (todo.start_date) {
         items.push({
           id: `${todo.id}-start`,
@@ -184,7 +164,6 @@ const CalendarPage = () => {
           status: todo.status,
         });
       }
-
       if (todo.due_date) {
         items.push({
           id: `${todo.id}-due`,
@@ -196,10 +175,9 @@ const CalendarPage = () => {
           status: todo.status,
         });
       }
-
       return items;
     }),
-    ...upcomingEvents.map((event) => ({
+    ...events.map((event) => ({
       id: event.id,
       date: event.event_date,
       type: "event" as const,
@@ -209,32 +187,26 @@ const CalendarPage = () => {
       status: null,
       event,
     })),
-  ].sort((left, right) => left.date.localeCompare(right.date));
+  ];
 
-  const overdueTasks = todos.filter((todo) => {
-    if (!todo.due_date || todo.status === "completed") return false;
-    return parseISO(todo.due_date) < new Date();
-  }).length;
+  const getItemsForDay = (day: Date) =>
+    allItems.filter((item) => isSameDay(parseISO(item.date), day));
+
+  const today = startOfDay(new Date());
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
-          <p className="text-muted-foreground font-body mt-1">
-            Next 14 days - scheduled tasks and events
+          <p className="text-muted-foreground mt-1">
+            {format(days[0], "MMM d")} – {format(days[13], "MMM d, yyyy")}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button
-              onClick={() =>
-                setEventForm((current) => ({
-                  ...current,
-                  eventDate: format(new Date(), "yyyy-MM-dd"),
-                }))
-              }
-            >
+            <Button>
               <Plus className="h-4 w-4 mr-1" />
               Add Event
             </Button>
@@ -247,85 +219,51 @@ const CalendarPage = () => {
               <Input
                 placeholder="Event title"
                 value={eventForm.title}
-                onChange={(event) =>
-                  setEventForm((current) => ({ ...current, title: event.target.value }))
-                }
+                onChange={(e) => setEventForm((c) => ({ ...c, title: e.target.value }))}
               />
               <Textarea
                 rows={3}
                 placeholder="Description"
                 value={eventForm.description}
-                onChange={(event) =>
-                  setEventForm((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
+                onChange={(e) => setEventForm((c) => ({ ...c, description: e.target.value }))}
               />
               <Input
                 type="date"
                 value={eventForm.eventDate}
-                onChange={(event) =>
-                  setEventForm((current) => ({ ...current, eventDate: event.target.value }))
-                }
+                onChange={(e) => setEventForm((c) => ({ ...c, eventDate: e.target.value }))}
               />
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   type="time"
                   value={eventForm.startTime}
-                  onChange={(event) =>
-                    setEventForm((current) => ({
-                      ...current,
-                      startTime: event.target.value,
-                    }))
-                  }
+                  onChange={(e) => setEventForm((c) => ({ ...c, startTime: e.target.value }))}
                 />
                 <Input
                   type="time"
                   value={eventForm.endTime}
-                  onChange={(event) =>
-                    setEventForm((current) => ({
-                      ...current,
-                      endTime: event.target.value,
-                    }))
-                  }
+                  onChange={(e) => setEventForm((c) => ({ ...c, endTime: e.target.value }))}
                 />
               </div>
               <Select
                 value={eventForm.type}
-                onValueChange={(value) =>
-                  setEventForm((current) => ({
-                    ...current,
-                    type: value as CalendarEventType,
-                  }))
-                }
+                onValueChange={(v) => setEventForm((c) => ({ ...c, type: v as CalendarEventType }))}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Event type" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Event type" /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(eventTypeConfig).map(([type, config]) => (
-                    <SelectItem key={type} value={type}>
-                      {config.label}
-                    </SelectItem>
+                  {Object.entries(eventTypeConfig).map(([type, cfg]) => (
+                    <SelectItem key={type} value={type}>{cfg.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select
                 value={eventForm.relatedTodoId}
-                onValueChange={(value) =>
-                  setEventForm((current) => ({ ...current, relatedTodoId: value }))
-                }
+                onValueChange={(v) => setEventForm((c) => ({ ...c, relatedTodoId: v }))}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Link to task (optional)" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Link to task (optional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No linked task</SelectItem>
                   {todos.map((todo) => (
-                    <SelectItem key={todo.id} value={todo.id}>
-                      {todo.title}
-                    </SelectItem>
+                    <SelectItem key={todo.id} value={todo.id}>{todo.title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -341,96 +279,151 @@ const CalendarPage = () => {
         </Dialog>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Scheduled items</p>
-            <p className="mt-2 text-3xl font-bold">{scheduleItems.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Overdue tasks</p>
-            <p className="mt-2 text-3xl font-bold">{overdueTasks}</p>
-          </CardContent>
-        </Card>
+      {/* 14-day grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {/* Weekday headers */}
+        {days.slice(0, 7).map((day) => (
+          <div key={format(day, "EEE")} className="text-center text-xs font-medium text-muted-foreground pb-1">
+            {format(day, "EEE")}
+          </div>
+        ))}
+
+        {/* Week 1 */}
+        {days.slice(0, 7).map((day) => {
+          const dayItems = getItemsForDay(day);
+          const isToday = isSameDay(day, today);
+          return (
+            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} />
+          );
+        })}
+
+        {/* Week 2 headers */}
+        {days.slice(7, 14).map((day) => (
+          <div key={format(day, "EEE") + "2"} className="text-center text-xs font-medium text-muted-foreground pb-1 pt-3">
+            {format(day, "EEE")}
+          </div>
+        ))}
+
+        {/* Week 2 */}
+        {days.slice(7, 14).map((day) => {
+          const dayItems = getItemsForDay(day);
+          const isToday = isSameDay(day, today);
+          return (
+            <DayCell key={day.toISOString()} day={day} items={dayItems} isToday={isToday} onSelect={setSelectedItem} />
+          );
+        })}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Next 14 Days</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {scheduleItems.length === 0 ? (
-            <p className="text-muted-foreground">No scheduled tasks or events</p>
-          ) : (
-            scheduleItems.map((item) => {
-              if ("event" in item && item.event) {
-                const event = item.event as CalendarEvent;
-                const config = eventTypeConfig[event.type];
-                return (
-                  <div
-                    key={item.id}
-                    className="flex items-start justify-between gap-3 rounded-lg border border-border/60 p-4"
-                  >
-                    <div>
-                      <p className="font-medium">{item.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(parseISO(item.date), "MMM d, yyyy")}
-                        {event.start_time ? ` • ${event.start_time.slice(0, 5)}` : ""}
-                      </p>
-                      {item.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className={config.className}>
-                        {config.label}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteEvent.mutate(event.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              }
-
-              const isDue = item.type === "task-due";
-              return (
-                <div
-                  key={item.id}
-                  className="flex items-start justify-between gap-3 rounded-lg border border-border/60 p-4"
-                >
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(parseISO(item.date), "MMM d, yyyy")} •{" "}
-                      {isDue ? "Task due" : "Task start"}
-                    </p>
-                    {item.project && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {item.project.name}
-                      </p>
-                    )}
-                    {item.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
-                    )}
-                  </div>
-                  <Badge variant="outline">
-                    {(item.status || "").replace("_", " ")}
+      {/* Detail Sheet */}
+      <Sheet open={!!selectedItem} onOpenChange={(open) => !open && setSelectedItem(null)}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>{selectedItem?.title}</SheetTitle>
+          </SheetHeader>
+          {selectedItem && (
+            <div className="space-y-4 pt-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline">
+                  {format(parseISO(selectedItem.date), "EEEE, MMM d")}
+                </Badge>
+                {selectedItem.type === "event" && selectedItem.event && (
+                  <Badge variant="outline" className={eventTypeConfig[selectedItem.event.type].className}>
+                    {eventTypeConfig[selectedItem.event.type].label}
                   </Badge>
-                </div>
-              );
-            })
+                )}
+                {selectedItem.type === "task-due" && (
+                  <Badge variant="outline" className="gap-1">
+                    <Clock className="h-3 w-3" /> Due
+                  </Badge>
+                )}
+                {selectedItem.type === "task-start" && (
+                  <Badge variant="outline" className="gap-1">
+                    <Flag className="h-3 w-3" /> Start
+                  </Badge>
+                )}
+                {selectedItem.status && (
+                  <Badge variant="outline">{selectedItem.status.replace("_", " ")}</Badge>
+                )}
+              </div>
+
+              {selectedItem.event?.start_time && (
+                <p className="text-sm text-muted-foreground">
+                  {selectedItem.event.start_time.slice(0, 5)}
+                  {selectedItem.event.end_time ? ` – ${selectedItem.event.end_time.slice(0, 5)}` : ""}
+                </p>
+              )}
+
+              {selectedItem.description && (
+                <p className="text-sm">{selectedItem.description}</p>
+              )}
+
+              {selectedItem.project && (
+                <p className="text-sm text-muted-foreground">
+                  Project: {selectedItem.project.name}
+                </p>
+              )}
+
+              {selectedItem.type === "event" && selectedItem.event && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => deleteEvent.mutate(selectedItem.event!.id)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete Event
+                </Button>
+              )}
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
+
+function DayCell({
+  day,
+  items,
+  isToday,
+  onSelect,
+}: {
+  day: Date;
+  items: ScheduleItem[];
+  isToday: boolean;
+  onSelect: (item: ScheduleItem) => void;
+}) {
+  return (
+    <Card className={`min-h-[120px] ${isToday ? "border-primary/50 bg-primary/5" : "border-border/40"}`}>
+      <CardContent className="p-2">
+        <p className={`text-xs font-semibold mb-1 ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+          {format(day, "d")}
+        </p>
+        <div className="space-y-1">
+          {items.slice(0, 4).map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onSelect(item)}
+              className="w-full text-left rounded px-1.5 py-0.5 text-[11px] leading-tight truncate transition-colors hover:bg-accent"
+              style={{
+                borderLeft: `2px solid ${
+                  item.type === "event"
+                    ? "hsl(var(--info))"
+                    : item.type === "task-due"
+                    ? "hsl(var(--destructive))"
+                    : "hsl(var(--warning))"
+                }`,
+              }}
+            >
+              {item.title}
+            </button>
+          ))}
+          {items.length > 4 && (
+            <p className="text-[10px] text-muted-foreground px-1">+{items.length - 4} more</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default CalendarPage;
