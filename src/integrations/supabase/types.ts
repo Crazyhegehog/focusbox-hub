@@ -80,6 +80,51 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_time: string | null
+          event_date: string
+          id: string
+          related_todo_id: string | null
+          start_time: string | null
+          title: string
+          type: Database["public"]["Enums"]["calendar_event_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_time?: string | null
+          event_date: string
+          id?: string
+          related_todo_id?: string | null
+          start_time?: string | null
+          title: string
+          type?: Database["public"]["Enums"]["calendar_event_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_time?: string | null
+          event_date?: string
+          id?: string
+          related_todo_id?: string | null
+          start_time?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["calendar_event_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_templates: {
         Row: {
           body: string
@@ -564,6 +609,30 @@ export type Database = {
           },
         ]
       }
+      todo_projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       todo_subtasks: {
         Row: {
           completed: boolean
@@ -603,7 +672,9 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          project_id: string | null
           responsible_id: string | null
+          start_date: string | null
           status: Database["public"]["Enums"]["todo_status"]
           title: string
           updated_at: string
@@ -614,7 +685,9 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          project_id?: string | null
           responsible_id?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["todo_status"]
           title: string
           updated_at?: string
@@ -625,12 +698,21 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          project_id?: string | null
           responsible_id?: string | null
+          start_date?: string | null
           status?: Database["public"]["Enums"]["todo_status"]
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "todos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "todo_projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "todos_responsible_id_fkey"
             columns: ["responsible_id"]
@@ -673,6 +755,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "member"
+      calendar_event_type:
+        | "meeting"
+        | "deadline"
+        | "reminder"
+        | "personal"
+        | "other"
       fulfillment_status: "not_started" | "preparing" | "shipped" | "delivered"
       order_status: "pending" | "packaged" | "sent"
       partner_status: "discussion" | "no_answer" | "sent_contract" | "signed"
@@ -807,6 +895,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "member"],
+      calendar_event_type: [
+        "meeting",
+        "deadline",
+        "reminder",
+        "personal",
+        "other",
+      ],
       fulfillment_status: ["not_started", "preparing", "shipped", "delivered"],
       order_status: ["pending", "packaged", "sent"],
       partner_status: ["discussion", "no_answer", "sent_contract", "signed"],
