@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.import-stripe-orders]
 verify_jwt = false
+
+[functions.fetch-stripe-orders]
+verify_jwt = false
