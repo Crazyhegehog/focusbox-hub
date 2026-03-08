@@ -577,6 +577,38 @@ export type Database = {
           },
         ]
       }
+      todo_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          todo_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          todo_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          todo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "todo_notes_todo_id_fkey"
+            columns: ["todo_id"]
+            isOneToOne: false
+            referencedRelation: "todos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       todo_participants: {
         Row: {
           accepted: boolean
@@ -611,6 +643,7 @@ export type Database = {
       }
       todo_projects: {
         Row: {
+          color: string | null
           created_at: string
           description: string | null
           id: string
@@ -618,6 +651,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -625,6 +659,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -672,6 +707,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          priority: Database["public"]["Enums"]["task_priority"]
           project_id: string | null
           responsible_id: string | null
           start_date: string | null
@@ -685,6 +721,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
           project_id?: string | null
           responsible_id?: string | null
           start_date?: string | null
@@ -698,6 +735,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
           project_id?: string | null
           responsible_id?: string | null
           start_date?: string | null
