@@ -83,6 +83,30 @@ const exportOrdersCSV = (orders: ExternalOrder[]) => {
   URL.revokeObjectURL(url);
 };
 
+const exportAddressesCSV = (orders: ExternalOrder[]) => {
+  // Filter orders with shipping addresses
+  const shippingOrders = orders.filter((o) => o.delivery_method === "shipping" && (o.shipping_address_line1 || o.shipping_name));
+  if (shippingOrders.length === 0) return;
+
+  const headers = ["Name", "Adresse 1", "Adresse 2", "PLZ", "Stadt", "Land"];
+  const rows = shippingOrders.map((o) => [
+    o.shipping_name || o.customer_name || "",
+    o.shipping_address_line1 || "",
+    o.shipping_address_line2 || "",
+    o.shipping_postal_code || "",
+    o.shipping_city || "",
+    o.shipping_country || "CH",
+  ]);
+  const csv = [headers.join(";"), ...rows.map((r) => r.map((v) => `"${v}"`).join(";"))].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `adressen-versand-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 const getEmailsByStatus = (orders: ExternalOrder[], status: string) => {
   return orders
     .filter((o) => o.order_status === status && o.customer_email)
@@ -592,9 +616,20 @@ const OrdersOverview = () => {
           <Button variant="outline" size="sm" onClick={handleImportAddresses} disabled={importingAddresses}>
             <RefreshCw className={`h-4 w-4 mr-1.5 ${importingAddresses ? "animate-spin" : ""}`} /> Adressen importieren
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { exportOrdersCSV(filteredOrders); toast({ title: "CSV exportiert" }); }}>
-            <Download className="h-4 w-4 mr-1.5" /> Export
-          </Button>
+           <Button variant="outline" size="sm" onClick={() => { exportOrdersCSV(filteredOrders); toast({ title: "CSV exportiert" }); }}>
+             <Download className="h-4 w-4 mr-1.5" /> Export
+           </Button>
+           <Button variant="outline" size="sm" onClick={() => { 
+             const shippingOrders = filteredOrders.filter(o => o.delivery_method === "shipping");
+             if (shippingOrders.length === 0) {
+               toast({ title: "Keine Adressen", description: "Keine Versandadressen zum Exportieren gefunden.", variant: "destructive" });
+               return;
+             }
+             exportAddressesCSV(filteredOrders);
+             toast({ title: `${shippingOrders.length} Adressen exportiert` });
+           }}>
+             <MapPin className="h-4 w-4 mr-1.5" /> Adressen-Export
+           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
