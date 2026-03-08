@@ -148,6 +148,7 @@ const OrdersOverview = () => {
   const totalOrders = validOrders.length;
   const toShip = validOrders.filter((o) => o.status !== "sent").length;
   const totalRevenue = validOrders.reduce((sum, o) => sum + (o.amount_total || 0), 0);
+  const revenueCurrency = validOrders[0]?.currency || "chf";
 
   const phoneSizeCounts = validOrders
     .filter((o) => o.status !== "sent")
@@ -207,7 +208,7 @@ const OrdersOverview = () => {
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle></CardHeader>
-          <CardContent><p className="text-3xl font-bold">{formatAmount(totalRevenue)}</p></CardContent>
+          <CardContent><p className="text-3xl font-bold">{formatAmount(totalRevenue, revenueCurrency)}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Phone Sizes Needed</CardTitle></CardHeader>
