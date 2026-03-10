@@ -549,6 +549,7 @@ const OrdersOverview = () => {
       customer_email: order.customer_email,
       phone_model: order.phone_model,
       quantity: order.quantity,
+      amount_total: order.amount_total,
       delivery_method: order.delivery_method,
       shipping_name: order.shipping_name,
       shipping_address_line1: order.shipping_address_line1,
