@@ -908,6 +908,10 @@ const OrdersOverview = () => {
                         </div>
                       </div>
                       <div>
+                        <Label className="text-xs text-muted-foreground">Betrag (CHF)</Label>
+                        <Input type="number" step="0.01" value={((editValues.amount_total || 0) / 100).toFixed(2)} onChange={(e) => setEditValues({ ...editValues, amount_total: Math.round(parseFloat(e.target.value || "0") * 100) })} className="h-8 text-sm" />
+                      </div>
+                      <div>
                         <Label className="text-xs text-muted-foreground">Versandart</Label>
                         <Select value={editValues.delivery_method || "shipping"} onValueChange={(v) => setEditValues({ ...editValues, delivery_method: v })}>
                           <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
