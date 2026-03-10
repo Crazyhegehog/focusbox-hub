@@ -549,6 +549,7 @@ const OrdersOverview = () => {
       customer_email: order.customer_email,
       phone_model: order.phone_model,
       quantity: order.quantity,
+      amount_total: order.amount_total,
       delivery_method: order.delivery_method,
       shipping_name: order.shipping_name,
       shipping_address_line1: order.shipping_address_line1,
@@ -905,6 +906,10 @@ const OrdersOverview = () => {
                           <Label className="text-xs text-muted-foreground">Menge</Label>
                           <Input type="number" value={editValues.quantity || 1} onChange={(e) => setEditValues({ ...editValues, quantity: parseInt(e.target.value) || 1 })} className="h-8 text-sm" />
                         </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Betrag (CHF)</Label>
+                        <Input type="number" step="0.01" value={((editValues.amount_total || 0) / 100).toFixed(2)} onChange={(e) => setEditValues({ ...editValues, amount_total: Math.round(parseFloat(e.target.value || "0") * 100) })} className="h-8 text-sm" />
                       </div>
                       <div>
                         <Label className="text-xs text-muted-foreground">Versandart</Label>
