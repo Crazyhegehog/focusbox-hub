@@ -192,7 +192,10 @@ const Partners = () => {
                   <Trophy className="h-5 w-5 text-warning" />
                   <div>
                     <p className="text-sm font-semibold">{getProfileNameByUserId(userId)}</p>
-                    <p className="text-xs text-muted-foreground">{count as number} added partner{(count as number) !== 1 ? "s" : ""}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {count as number} added partner{(count as number) !== 1 ? "s" : ""}
+                      {signedByUser[userId] ? ` · ${signedByUser[userId]} signed` : ""}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
