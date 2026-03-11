@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Users, Trophy, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Users, Trophy, Trash2, RefreshCw, Upload, FileText, X } from "lucide-react";
 import PartnerNotesSheet from "@/components/partners/PartnerNotesSheet";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
@@ -213,8 +213,9 @@ const Partners = () => {
                   <TableHead>Status</TableHead>
                   <TableHead>Notes</TableHead>
                   <TableHead>Last Post</TableHead>
-                   <TableHead className="text-center">Days</TableHead>
-                   <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-center">Days</TableHead>
+                  <TableHead>Contract</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                  </TableRow>
               </TableHeader>
               <TableBody>
@@ -289,6 +290,65 @@ const Partners = () => {
                             {days}d ago
                           </Badge>
                         ) : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {(p as any).contract_url ? (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 gap-1 text-xs"
+                              onClick={async () => {
+                                const { data, error } = await supabase.storage
+                                  .from("partner-contracts")
+                                  .createSignedUrl((p as any).contract_url, 60);
+                                if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                if (error) toast({ title: "Could not open file", variant: "destructive" });
+                              }}
+                            >
+                              <FileText className="h-3 w-3" /> View
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={async () => {
+                                await supabase.storage.from("partner-contracts").remove([(p as any).contract_url]);
+                                updatePartner.mutate({ id: p.id, updates: { contract_url: null } });
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = ".pdf,.doc,.docx";
+                              input.onchange = async (e) => {
+                                const file = (e.target as HTMLInputElement).files?.[0];
+                                if (!file) return;
+                                const path = `${p.id}/${file.name}`;
+                                const { error: uploadError } = await supabase.storage
+                                  .from("partner-contracts")
+                                  .upload(path, file, { upsert: true });
+                                if (uploadError) {
+                                  toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+                                  return;
+                                }
+                                updatePartner.mutate({ id: p.id, updates: { contract_url: path } });
+                                toast({ title: "Contract uploaded" });
+                              };
+                              input.click();
+                            }}
+                          >
+                            <Upload className="h-3 w-3" /> Upload
+                          </Button>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">

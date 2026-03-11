@@ -413,6 +413,7 @@ export type Database = {
       }
       partners: {
         Row: {
+          contract_url: string | null
           created_at: string
           created_by: string | null
           email: string
@@ -424,6 +425,7 @@ export type Database = {
           status: Database["public"]["Enums"]["partner_status"]
         }
         Insert: {
+          contract_url?: string | null
           created_at?: string
           created_by?: string | null
           email?: string
@@ -435,6 +437,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["partner_status"]
         }
         Update: {
+          contract_url?: string | null
           created_at?: string
           created_by?: string | null
           email?: string
