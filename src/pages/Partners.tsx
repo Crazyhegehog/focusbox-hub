@@ -44,6 +44,18 @@ const Partners = () => {
     },
   });
 
+  const { data: allNotes = [] } = useQuery({
+    queryKey: ["partner-notes-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_notes")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: profiles = [] } = useQuery({
     queryKey: ["profiles"],
     queryFn: async () => {
