@@ -206,6 +206,7 @@ const Partners = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">Todo</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Added By</TableHead>
@@ -221,6 +222,19 @@ const Partners = () => {
                   const days = getDayCount(p);
                   return (
                     <TableRow key={p.id}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={p.status === "needs_todo"}
+                          onChange={(e) => {
+                            updatePartner.mutate({
+                              id: p.id,
+                              updates: { status: e.target.checked ? "needs_todo" : "discussion" },
+                            });
+                          }}
+                          className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{p.name || "—"}</TableCell>
                       <TableCell className="text-muted-foreground">{p.email}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
