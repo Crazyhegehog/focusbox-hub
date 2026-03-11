@@ -15,14 +15,15 @@ import PartnerNotesSheet from "@/components/partners/PartnerNotesSheet";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   discussion: { label: "Discussion", className: "bg-info/15 text-info border-info/30" },
   no_answer: { label: "No Answer", className: "bg-warning/15 text-warning border-warning/30" },
-  sent_contract: { label: "Sent Contract", className: "bg-accent text-accent-foreground border-border" },
+  needs_todo: { label: "Needs Todo", className: "bg-primary/15 text-primary border-primary/30" },
+  sent_contract: { label: "Contacted", className: "bg-accent text-accent-foreground border-border" },
   signed: { label: "Signed", className: "bg-success/15 text-success border-success/30" },
 };
 
-const STATUS_OPTIONS = ["discussion", "no_answer", "sent_contract", "signed"] as const;
+const STATUS_OPTIONS = ["discussion", "no_answer", "needs_todo", "sent_contract", "signed"] as const;
 
 const Partners = () => {
   const { user } = useAuth();
