@@ -33,6 +33,7 @@ const Partners = () => {
   const [name, setName] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [syncing, setSyncing] = useState(false);
+  const [notesPartnerId, setNotesPartnerId] = useState<string | null>(null);
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ["partners"],
