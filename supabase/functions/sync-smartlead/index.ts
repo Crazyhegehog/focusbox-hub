@@ -2,12 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 const SMARTLEAD_BASE = "https://server.smartlead.ai/api/v1";
 const MATTHEW_USER_ID = "4a066397-68cf-47ee-86d7-436cd07ec6ce";
+const SENT_STATUSES = new Set(["INPROGRESS", "COMPLETED", "PAUSED", "STOPPED"]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -30,8 +30,7 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } =
-      await supabase.auth.getClaims(token);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -44,118 +43,109 @@ Deno.serve(async (req) => {
       throw new Error("SMARTLEAD_API_KEY not configured");
     }
 
-    // Step 1: Get all campaigns
-    console.log("Fetching campaigns...");
-    const campaignsRes = await fetch(
-      `${SMARTLEAD_BASE}/campaigns?api_key=${apiKey}`
-    );
+    const campaignsRes = await fetch(`${SMARTLEAD_BASE}/campaigns?api_key=${apiKey}`);
     if (!campaignsRes.ok) {
       const body = await campaignsRes.text();
       throw new Error(`Failed to fetch campaigns: ${campaignsRes.status} - ${body}`);
     }
-    const campaigns = await campaignsRes.json();
-    console.log(`Found ${campaigns.length} campaigns`);
 
-    let totalImported = 0;
+    const campaigns = await campaignsRes.json();
+    let imported = 0;
+    let matchedSent = 0;
+    let skippedNoEmail = 0;
+    const statusCounts: Record<string, number> = {};
     const errors: string[] = [];
 
-    // Step 2: For each campaign, get ALL leads — they are all "sent" contacts
     for (const campaign of campaigns) {
-      try {
-        let offset = 0;
-        const limit = 100;
-        let hasMore = true;
+      let offset = 0;
+      const limit = 100;
+      let hasMore = true;
 
-        console.log(`Processing campaign: ${campaign.id} - ${campaign.name}`);
+      while (hasMore) {
+        const leadsRes = await fetch(
+          `${SMARTLEAD_BASE}/campaigns/${campaign.id}/leads?api_key=${apiKey}&offset=${offset}&limit=${limit}`
+        );
 
-        while (hasMore) {
-          const leadsUrl = `${SMARTLEAD_BASE}/campaigns/${campaign.id}/leads?api_key=${apiKey}&offset=${offset}&limit=${limit}`;
-          console.log(`Fetching leads offset=${offset}`);
-          const leadsRes = await fetch(leadsUrl);
-
-          if (!leadsRes.ok) {
-            const body = await leadsRes.text();
-            errors.push(`Campaign ${campaign.id}: HTTP ${leadsRes.status} - ${body}`);
-            break;
-          }
-
-          const leadsData = await leadsRes.json();
-          // API may return { data: [...] } or just [...]
-          const leads = Array.isArray(leadsData) ? leadsData : (leadsData.data || []);
-          
-          console.log(`Got ${leads.length} leads at offset ${offset}`);
-          
-          if (leads.length === 0) {
-            hasMore = false;
-            break;
-          }
-
-          // Log first lead to see structure
-          if (offset === 0) {
-            console.log("Sample lead:", JSON.stringify(leads[0]));
-          }
-
-          // Import ALL leads as sent_contract partners (they are all "sent" contacts)
-          for (const lead of leads) {
-            const email = lead.email || lead.lead_email || "";
-            if (!email) continue;
-
-            const name =
-              [lead.first_name, lead.last_name].filter(Boolean).join(" ") ||
-              lead.name ||
-              "";
-
-            const { error: upsertError } = await supabase
-              .from("partners")
-              .upsert(
-                {
-                  email,
-                  name: name || email.split("@")[0],
-                  status: "sent_contract",
-                  created_by: MATTHEW_USER_ID,
-                },
-                { onConflict: "email" }
-              );
-
-            if (upsertError) {
-              errors.push(`Upsert ${email}: ${upsertError.message}`);
-            } else {
-              totalImported++;
-            }
-          }
-
-          if (leads.length < limit) {
-            hasMore = false;
-          } else {
-            offset += limit;
-          }
+        if (!leadsRes.ok) {
+          const body = await leadsRes.text();
+          errors.push(`Campaign ${campaign.id}: HTTP ${leadsRes.status} - ${body}`);
+          break;
         }
-      } catch (e) {
-        errors.push(`Campaign ${campaign.id}: ${e.message}`);
+
+        const leadsData = await leadsRes.json();
+        const leads = Array.isArray(leadsData) ? leadsData : (leadsData.data || []);
+
+        if (!leads.length) {
+          hasMore = false;
+          break;
+        }
+
+        for (const row of leads) {
+          const status = String(row.status || row.lead_status || row.lead?.status || "UNKNOWN").toUpperCase();
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+          if (!SENT_STATUSES.has(status)) continue;
+          matchedSent += 1;
+
+          const leadObj = row.lead ?? row;
+          const email = (leadObj.email || leadObj.lead_email || "").trim().toLowerCase();
+          if (!email) {
+            skippedNoEmail += 1;
+            continue;
+          }
+
+          const name =
+            [leadObj.first_name, leadObj.last_name].filter(Boolean).join(" ") ||
+            leadObj.name ||
+            email.split("@")[0];
+
+          const { error: upsertError } = await supabase
+            .from("partners")
+            .upsert(
+              {
+                email,
+                name,
+                status: "sent_contract",
+                created_by: MATTHEW_USER_ID,
+              },
+              { onConflict: "email" }
+            );
+
+          if (upsertError) {
+            errors.push(`Upsert ${email}: ${upsertError.message}`);
+            continue;
+          }
+
+          imported += 1;
+        }
+
+        if (leads.length < limit) {
+          hasMore = false;
+        } else {
+          offset += limit;
+        }
       }
     }
-
-    console.log(`Sync complete: ${totalImported} imported, ${errors.length} errors`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        imported: totalImported,
+        imported,
+        matched_sent: matchedSent,
+        skipped_no_email: skippedNoEmail,
         campaigns_checked: campaigns.length,
-        errors: errors.length > 0 ? errors : undefined,
+        status_counts: statusCounts,
+        errors: errors.length ? errors : undefined,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
-    console.error("Sync error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
