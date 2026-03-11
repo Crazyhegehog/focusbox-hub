@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Plus, Users, Trophy, Trash2, RefreshCw } from "lucide-react";
+import PartnerNotesSheet from "@/components/partners/PartnerNotesSheet";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 
