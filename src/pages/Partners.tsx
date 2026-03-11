@@ -224,11 +224,11 @@ const Partners = () => {
                       <TableCell>
                         <input
                           type="checkbox"
-                          checked={p.status === "needs_todo"}
+                          checked={(p as any).needs_todo === true}
                           onChange={(e) => {
                             updatePartner.mutate({
                               id: p.id,
-                              updates: { status: e.target.checked ? "needs_todo" : "discussion" },
+                              updates: { needs_todo: e.target.checked },
                             });
                           }}
                           className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
