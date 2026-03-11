@@ -318,6 +318,15 @@ const Partners = () => {
           )}
         </CardContent>
       </Card>
+
+      {notesPartnerId && (
+        <PartnerNotesSheet
+          partnerId={notesPartnerId}
+          partnerName={partners.find(p => p.id === notesPartnerId)?.name || partners.find(p => p.id === notesPartnerId)?.email || ""}
+          open={!!notesPartnerId}
+          onOpenChange={(open) => { if (!open) setNotesPartnerId(null); }}
+        />
+      )}
     </div>
   );
 };
