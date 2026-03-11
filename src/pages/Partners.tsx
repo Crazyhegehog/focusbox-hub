@@ -15,14 +15,15 @@ import PartnerNotesSheet from "@/components/partners/PartnerNotesSheet";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; className: string }> = {
   discussion: { label: "Discussion", className: "bg-info/15 text-info border-info/30" },
   no_answer: { label: "No Answer", className: "bg-warning/15 text-warning border-warning/30" },
-  sent_contract: { label: "Sent Contract", className: "bg-accent text-accent-foreground border-border" },
+  needs_todo: { label: "Needs Todo", className: "bg-primary/15 text-primary border-primary/30" },
+  sent_contract: { label: "Contacted", className: "bg-accent text-accent-foreground border-border" },
   signed: { label: "Signed", className: "bg-success/15 text-success border-success/30" },
 };
 
-const STATUS_OPTIONS = ["discussion", "no_answer", "sent_contract", "signed"] as const;
+const STATUS_OPTIONS = ["discussion", "no_answer", "needs_todo", "sent_contract", "signed"] as const;
 
 const Partners = () => {
   const { user } = useAuth();
@@ -38,6 +39,18 @@ const Partners = () => {
     queryKey: ["partners"],
     queryFn: async () => {
       const { data, error } = await supabase.from("partners").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: allNotes = [] } = useQuery({
+    queryKey: ["partner-notes-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("partner_notes")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -102,6 +115,9 @@ const Partners = () => {
 
   const getProfileNameByUserId = (userId: string) =>
     profiles.find((p) => p.user_id === userId)?.full_name || "Unknown";
+
+  const getLatestNote = (partnerId: string) =>
+    allNotes.find((n) => n.partner_id === partnerId);
 
   const syncSmartlead = async () => {
     setSyncing(true);
@@ -194,6 +210,7 @@ const Partners = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Added By</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead>Last Post</TableHead>
                    <TableHead className="text-center">Days</TableHead>
                    <TableHead className="text-right">Actions</TableHead>
@@ -229,6 +246,17 @@ const Partners = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell className="max-w-[200px]">
+                        {(() => {
+                          const note = getLatestNote(p.id);
+                          if (!note) return <span className="text-muted-foreground text-xs">—</span>;
+                          return (
+                            <p className="text-xs text-muted-foreground truncate" title={note.content}>
+                              {note.content}
+                            </p>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell>
                         <Input

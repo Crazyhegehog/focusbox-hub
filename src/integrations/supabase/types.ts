@@ -833,7 +833,12 @@ export type Database = {
         | "other"
       fulfillment_status: "not_started" | "preparing" | "shipped" | "delivered"
       order_status: "pending" | "packaged" | "sent"
-      partner_status: "discussion" | "no_answer" | "sent_contract" | "signed"
+      partner_status:
+        | "discussion"
+        | "no_answer"
+        | "sent_contract"
+        | "signed"
+        | "needs_todo"
       task_priority: "high" | "medium" | "low"
       task_status: "not_started" | "in_progress" | "completed"
       todo_status: "not_started" | "in_progress" | "completed"
@@ -974,7 +979,13 @@ export const Constants = {
       ],
       fulfillment_status: ["not_started", "preparing", "shipped", "delivered"],
       order_status: ["pending", "packaged", "sent"],
-      partner_status: ["discussion", "no_answer", "sent_contract", "signed"],
+      partner_status: [
+        "discussion",
+        "no_answer",
+        "sent_contract",
+        "signed",
+        "needs_todo",
+      ],
       task_priority: ["high", "medium", "low"],
       task_status: ["not_started", "in_progress", "completed"],
       todo_status: ["not_started", "in_progress", "completed"],

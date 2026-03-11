@@ -1,0 +1,1 @@
+ALTER TYPE public.partner_status ADD VALUE 'needs_todo';
