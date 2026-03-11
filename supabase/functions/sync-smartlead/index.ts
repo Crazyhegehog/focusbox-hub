@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verify auth
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -46,56 +45,58 @@ Deno.serve(async (req) => {
     }
 
     // Step 1: Get all campaigns
+    console.log("Fetching campaigns...");
     const campaignsRes = await fetch(
       `${SMARTLEAD_BASE}/campaigns?api_key=${apiKey}`
     );
     if (!campaignsRes.ok) {
-      throw new Error(`Failed to fetch campaigns: ${campaignsRes.status}`);
+      const body = await campaignsRes.text();
+      throw new Error(`Failed to fetch campaigns: ${campaignsRes.status} - ${body}`);
     }
     const campaigns = await campaignsRes.json();
+    console.log(`Found ${campaigns.length} campaigns`);
 
     let totalImported = 0;
     const errors: string[] = [];
 
-    // Step 2: For each campaign, get leads and filter for sent/completed
+    // Step 2: For each campaign, get ALL leads — they are all "sent" contacts
     for (const campaign of campaigns) {
       try {
-        // Fetch leads with offset pagination
         let offset = 0;
         const limit = 100;
         let hasMore = true;
 
+        console.log(`Processing campaign: ${campaign.id} - ${campaign.name}`);
+
         while (hasMore) {
-          const leadsRes = await fetch(
-            `${SMARTLEAD_BASE}/campaigns/${campaign.id}/leads?api_key=${apiKey}&offset=${offset}&limit=${limit}`
-          );
+          const leadsUrl = `${SMARTLEAD_BASE}/campaigns/${campaign.id}/leads?api_key=${apiKey}&offset=${offset}&limit=${limit}`;
+          console.log(`Fetching leads offset=${offset}`);
+          const leadsRes = await fetch(leadsUrl);
 
           if (!leadsRes.ok) {
-            errors.push(
-              `Campaign ${campaign.id}: HTTP ${leadsRes.status}`
-            );
+            const body = await leadsRes.text();
+            errors.push(`Campaign ${campaign.id}: HTTP ${leadsRes.status} - ${body}`);
             break;
           }
 
-          const leads = await leadsRes.json();
-          if (!Array.isArray(leads) || leads.length === 0) {
+          const leadsData = await leadsRes.json();
+          // API may return { data: [...] } or just [...]
+          const leads = Array.isArray(leadsData) ? leadsData : (leadsData.data || []);
+          
+          console.log(`Got ${leads.length} leads at offset ${offset}`);
+          
+          if (leads.length === 0) {
             hasMore = false;
             break;
           }
 
-          // Filter for leads where lead_status indicates sequence completed / sent
-          const sentLeads = leads.filter((lead: any) => {
-            const status = (lead.lead_status || lead.status || "").toLowerCase();
-            return (
-              status === "completed" ||
-              status === "sent" ||
-              status === "email_sent" ||
-              status === "sequence_completed"
-            );
-          });
+          // Log first lead to see structure
+          if (offset === 0) {
+            console.log("Sample lead:", JSON.stringify(leads[0]));
+          }
 
-          // Upsert into partners
-          for (const lead of sentLeads) {
+          // Import ALL leads as sent_contract partners (they are all "sent" contacts)
+          for (const lead of leads) {
             const email = lead.email || lead.lead_email || "";
             if (!email) continue;
 
@@ -109,7 +110,7 @@ Deno.serve(async (req) => {
               .upsert(
                 {
                   email,
-                  name,
+                  name: name || email.split("@")[0],
                   status: "sent_contract",
                   created_by: MATTHEW_USER_ID,
                 },
@@ -133,6 +134,8 @@ Deno.serve(async (req) => {
         errors.push(`Campaign ${campaign.id}: ${e.message}`);
       }
     }
+
+    console.log(`Sync complete: ${totalImported} imported, ${errors.length} errors`);
 
     return new Response(
       JSON.stringify({
