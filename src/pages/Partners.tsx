@@ -261,7 +261,10 @@ const Partners = () => {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
+                      <TableCell
+                        className="max-w-[200px] cursor-pointer hover:bg-muted/50"
+                        onClick={() => setNotesPartnerId(p.id)}
+                      >
                         {(() => {
                           const note = getLatestNote(p.id);
                           if (!note) return <span className="text-muted-foreground text-xs">—</span>;
