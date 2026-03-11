@@ -168,7 +168,6 @@ const Todos = () => {
         name: projectForm.name,
         description: projectForm.description || null,
         color: projectForm.color,
-        created_by: user!.id,
       });
       if (error) throw error;
     },
