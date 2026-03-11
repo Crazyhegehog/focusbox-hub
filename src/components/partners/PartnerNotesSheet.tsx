@@ -81,11 +81,6 @@ const PartnerNotesSheet = ({ partnerId, partnerName, open: controlledOpen, onOpe
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button size="sm" variant="ghost">
-          <MessageSquare className="h-3 w-3" />
-        </Button>
-      </SheetTrigger>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Notes — {partnerName}</SheetTitle>
