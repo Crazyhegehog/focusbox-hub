@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Users, Trophy, Trash2 } from "lucide-react";
+import { Plus, Users, Trophy, Trash2, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInDays } from "date-fns";
 
@@ -31,6 +31,7 @@ const Partners = () => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [syncing, setSyncing] = useState(false);
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ["partners"],
@@ -101,6 +102,20 @@ const Partners = () => {
   const getProfileNameByUserId = (userId: string) =>
     profiles.find((p) => p.user_id === userId)?.full_name || "Unknown";
 
+  const syncSmartlead = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-smartlead");
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast({ title: `Smartlead sync complete`, description: `${data.imported} leads imported from ${data.campaigns_checked} campaigns` });
+    } catch (e: any) {
+      toast({ title: "Sync failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const filteredPartners = statusFilter === "all" ? partners : partners.filter((p) => p.status === statusFilter);
 
   return (
@@ -111,6 +126,10 @@ const Partners = () => {
           <p className="text-muted-foreground font-body mt-1">Manage partner pipeline</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={syncSmartlead} disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Refresh Smartlead"}
+          </Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[150px] h-9">
               <SelectValue />
