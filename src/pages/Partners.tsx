@@ -294,15 +294,20 @@ const Partners = () => {
                       <TableCell>
                         {(p as any).contract_url ? (
                           <div className="flex items-center gap-1">
-                            <a
-                              href={supabase.storage.from("partner-contracts").getPublicUrl((p as any).contract_url).data.publicUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 gap-1 text-xs"
+                              onClick={async () => {
+                                const { data, error } = await supabase.storage
+                                  .from("partner-contracts")
+                                  .createSignedUrl((p as any).contract_url, 60);
+                                if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                                if (error) toast({ title: "Could not open file", variant: "destructive" });
+                              }}
                             >
-                              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
-                                <FileText className="h-3 w-3" /> View
-                              </Button>
-                            </a>
+                              <FileText className="h-3 w-3" /> View
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
