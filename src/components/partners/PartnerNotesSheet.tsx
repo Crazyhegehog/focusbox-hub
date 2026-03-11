@@ -59,6 +59,7 @@ const PartnerNotesSheet = ({ partnerId, partnerName, open: controlledOpen, onOpe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["partner-notes", partnerId] });
+      queryClient.invalidateQueries({ queryKey: ["partner-notes-all"] });
       setContent("");
       toast({ title: "Note added" });
     },
