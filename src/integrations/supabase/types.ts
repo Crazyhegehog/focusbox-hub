@@ -419,6 +419,7 @@ export type Database = {
           id: string
           last_post_date: string | null
           name: string
+          needs_todo: boolean
           signed_date: string | null
           status: Database["public"]["Enums"]["partner_status"]
         }
@@ -429,6 +430,7 @@ export type Database = {
           id?: string
           last_post_date?: string | null
           name?: string
+          needs_todo?: boolean
           signed_date?: string | null
           status?: Database["public"]["Enums"]["partner_status"]
         }
@@ -439,6 +441,7 @@ export type Database = {
           id?: string
           last_post_date?: string | null
           name?: string
+          needs_todo?: boolean
           signed_date?: string | null
           status?: Database["public"]["Enums"]["partner_status"]
         }

@@ -1,0 +1,1 @@
+ALTER TABLE public.partners ADD COLUMN IF NOT EXISTS needs_todo BOOLEAN NOT NULL DEFAULT false;
