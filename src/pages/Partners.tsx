@@ -213,8 +213,9 @@ const Partners = () => {
                   <TableHead>Status</TableHead>
                   <TableHead>Notes</TableHead>
                   <TableHead>Last Post</TableHead>
-                   <TableHead className="text-center">Days</TableHead>
-                   <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-center">Days</TableHead>
+                  <TableHead>Contract</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                  </TableRow>
               </TableHeader>
               <TableBody>
