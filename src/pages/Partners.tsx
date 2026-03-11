@@ -210,6 +210,7 @@ const Partners = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Added By</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead>Last Post</TableHead>
                    <TableHead className="text-center">Days</TableHead>
                    <TableHead className="text-right">Actions</TableHead>
