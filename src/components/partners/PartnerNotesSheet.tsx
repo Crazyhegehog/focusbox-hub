@@ -12,14 +12,18 @@ import { format } from "date-fns";
 interface PartnerNotesSheetProps {
   partnerId: string;
   partnerName: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const PartnerNotesSheet = ({ partnerId, partnerName }: PartnerNotesSheetProps) => {
+const PartnerNotesSheet = ({ partnerId, partnerName, open: controlledOpen, onOpenChange }: PartnerNotesSheetProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ["partner-notes", partnerId],
