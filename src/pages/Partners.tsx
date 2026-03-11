@@ -102,6 +102,20 @@ const Partners = () => {
   const getProfileNameByUserId = (userId: string) =>
     profiles.find((p) => p.user_id === userId)?.full_name || "Unknown";
 
+  const syncSmartlead = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-smartlead");
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["partners"] });
+      toast({ title: `Smartlead sync complete`, description: `${data.imported} leads imported from ${data.campaigns_checked} campaigns` });
+    } catch (e: any) {
+      toast({ title: "Sync failed", description: e.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const filteredPartners = statusFilter === "all" ? partners : partners.filter((p) => p.status === statusFilter);
 
   return (
