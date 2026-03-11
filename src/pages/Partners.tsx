@@ -105,9 +105,16 @@ const Partners = () => {
     return differenceInDays(new Date(), new Date(refDate));
   };
 
-  // Signed contracts per user
+  // Stats per user
   const addedByUser = partners
     .filter((p) => p.created_by)
+    .reduce((acc, p) => {
+      acc[p.created_by!] = (acc[p.created_by!] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const signedByUser = partners
+    .filter((p) => p.status === "signed" && p.created_by)
     .reduce((acc, p) => {
       acc[p.created_by!] = (acc[p.created_by!] || 0) + 1;
       return acc;
