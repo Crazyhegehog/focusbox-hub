@@ -33,6 +33,7 @@ const Partners = () => {
   const [name, setName] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [syncing, setSyncing] = useState(false);
+  const [notesPartnerId, setNotesPartnerId] = useState<string | null>(null);
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ["partners"],
@@ -260,7 +261,10 @@ const Partners = () => {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
+                      <TableCell
+                        className="max-w-[200px] cursor-pointer hover:bg-muted/50"
+                        onClick={() => setNotesPartnerId(p.id)}
+                      >
                         {(() => {
                           const note = getLatestNote(p.id);
                           if (!note) return <span className="text-muted-foreground text-xs">—</span>;
@@ -314,6 +318,15 @@ const Partners = () => {
           )}
         </CardContent>
       </Card>
+
+      {notesPartnerId && (
+        <PartnerNotesSheet
+          partnerId={notesPartnerId}
+          partnerName={partners.find(p => p.id === notesPartnerId)?.name || partners.find(p => p.id === notesPartnerId)?.email || ""}
+          open={!!notesPartnerId}
+          onOpenChange={(open) => { if (!open) setNotesPartnerId(null); }}
+        />
+      )}
     </div>
   );
 };

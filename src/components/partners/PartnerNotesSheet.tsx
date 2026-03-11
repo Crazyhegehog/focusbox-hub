@@ -12,14 +12,18 @@ import { format } from "date-fns";
 interface PartnerNotesSheetProps {
   partnerId: string;
   partnerName: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const PartnerNotesSheet = ({ partnerId, partnerName }: PartnerNotesSheetProps) => {
+const PartnerNotesSheet = ({ partnerId, partnerName, open: controlledOpen, onOpenChange }: PartnerNotesSheetProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ["partner-notes", partnerId],
@@ -55,6 +59,7 @@ const PartnerNotesSheet = ({ partnerId, partnerName }: PartnerNotesSheetProps) =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["partner-notes", partnerId] });
+      queryClient.invalidateQueries({ queryKey: ["partner-notes-all"] });
       setContent("");
       toast({ title: "Note added" });
     },
@@ -67,6 +72,7 @@ const PartnerNotesSheet = ({ partnerId, partnerName }: PartnerNotesSheetProps) =
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["partner-notes", partnerId] });
+      queryClient.invalidateQueries({ queryKey: ["partner-notes-all"] });
     },
   });
 
@@ -75,11 +81,6 @@ const PartnerNotesSheet = ({ partnerId, partnerName }: PartnerNotesSheetProps) =
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button size="sm" variant="ghost">
-          <MessageSquare className="h-3 w-3" />
-        </Button>
-      </SheetTrigger>
       <SheetContent>
         <SheetHeader>
           <SheetTitle>Notes — {partnerName}</SheetTitle>
