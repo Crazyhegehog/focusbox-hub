@@ -105,9 +105,16 @@ const Partners = () => {
     return differenceInDays(new Date(), new Date(refDate));
   };
 
-  // Signed contracts per user
+  // Stats per user
   const addedByUser = partners
     .filter((p) => p.created_by)
+    .reduce((acc, p) => {
+      acc[p.created_by!] = (acc[p.created_by!] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const signedByUser = partners
+    .filter((p) => p.status === "signed" && p.created_by)
     .reduce((acc, p) => {
       acc[p.created_by!] = (acc[p.created_by!] || 0) + 1;
       return acc;
@@ -185,7 +192,10 @@ const Partners = () => {
                   <Trophy className="h-5 w-5 text-warning" />
                   <div>
                     <p className="text-sm font-semibold">{getProfileNameByUserId(userId)}</p>
-                    <p className="text-xs text-muted-foreground">{count as number} added partner{(count as number) !== 1 ? "s" : ""}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {count as number} added partner{(count as number) !== 1 ? "s" : ""}
+                      {signedByUser[userId] ? ` · ${signedByUser[userId]} signed` : ""}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
