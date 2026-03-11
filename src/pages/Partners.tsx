@@ -116,6 +116,9 @@ const Partners = () => {
   const getProfileNameByUserId = (userId: string) =>
     profiles.find((p) => p.user_id === userId)?.full_name || "Unknown";
 
+  const getLatestNote = (partnerId: string) =>
+    allNotes.find((n) => n.partner_id === partnerId);
+
   const syncSmartlead = async () => {
     setSyncing(true);
     try {
