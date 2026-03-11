@@ -175,9 +175,9 @@ const Partners = () => {
       </div>
 
       {/* Contacted partners leaderboard */}
-      {Object.keys(contactedByUser).length > 0 && (
+      {Object.keys(addedByUser).length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {Object.entries(contactedByUser)
+          {Object.entries(addedByUser)
             .sort(([, a], [, b]) => (b as number) - (a as number))
             .map(([userId, count]) => (
               <Card key={userId}>
@@ -185,7 +185,7 @@ const Partners = () => {
                   <Trophy className="h-5 w-5 text-warning" />
                   <div>
                     <p className="text-sm font-semibold">{getProfileNameByUserId(userId)}</p>
-                    <p className="text-xs text-muted-foreground">{count as number} contacted partner{(count as number) !== 1 ? "s" : ""}</p>
+                    <p className="text-xs text-muted-foreground">{count as number} added partner{(count as number) !== 1 ? "s" : ""}</p>
                   </div>
                 </CardContent>
               </Card>
