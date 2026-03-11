@@ -247,6 +247,17 @@ const Partners = () => {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell className="max-w-[200px]">
+                        {(() => {
+                          const note = getLatestNote(p.id);
+                          if (!note) return <span className="text-muted-foreground text-xs">—</span>;
+                          return (
+                            <p className="text-xs text-muted-foreground truncate" title={note.content}>
+                              {note.content}
+                            </p>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>
                         <Input
                           type="date"
