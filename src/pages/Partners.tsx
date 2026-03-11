@@ -18,12 +18,11 @@ import { differenceInDays } from "date-fns";
 const statusConfig: Record<string, { label: string; className: string }> = {
   discussion: { label: "Discussion", className: "bg-info/15 text-info border-info/30" },
   no_answer: { label: "No Answer", className: "bg-warning/15 text-warning border-warning/30" },
-  needs_todo: { label: "Needs Todo", className: "bg-primary/15 text-primary border-primary/30" },
   sent_contract: { label: "Contacted", className: "bg-accent text-accent-foreground border-border" },
   signed: { label: "Signed", className: "bg-success/15 text-success border-success/30" },
 };
 
-const STATUS_OPTIONS = ["discussion", "no_answer", "needs_todo", "sent_contract", "signed"] as const;
+const STATUS_OPTIONS = ["discussion", "no_answer", "sent_contract", "signed"] as const;
 
 const Partners = () => {
   const { user } = useAuth();
@@ -225,11 +224,11 @@ const Partners = () => {
                       <TableCell>
                         <input
                           type="checkbox"
-                          checked={p.status === "needs_todo"}
+                          checked={(p as any).needs_todo === true}
                           onChange={(e) => {
                             updatePartner.mutate({
                               id: p.id,
-                              updates: { status: e.target.checked ? "needs_todo" : "discussion" },
+                              updates: { needs_todo: e.target.checked },
                             });
                           }}
                           className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
