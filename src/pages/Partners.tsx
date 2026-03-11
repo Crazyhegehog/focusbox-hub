@@ -105,8 +105,8 @@ const Partners = () => {
   };
 
   // Signed contracts per user
-  const signedByUser = partners
-    .filter((p) => p.status === "signed" && p.created_by)
+  const contactedByUser = partners
+    .filter((p) => p.status === "sent_contract" && p.created_by)
     .reduce((acc, p) => {
       acc[p.created_by!] = (acc[p.created_by!] || 0) + 1;
       return acc;
@@ -173,18 +173,18 @@ const Partners = () => {
         </div>
       </div>
 
-      {/* Signed contracts leaderboard */}
-      {Object.keys(signedByUser).length > 0 && (
+      {/* Contacted partners leaderboard */}
+      {Object.keys(contactedByUser).length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {Object.entries(signedByUser)
-            .sort(([, a], [, b]) => b - a)
+          {Object.entries(contactedByUser)
+            .sort(([, a], [, b]) => (b as number) - (a as number))
             .map(([userId, count]) => (
               <Card key={userId}>
                 <CardContent className="p-4 flex items-center gap-3">
                   <Trophy className="h-5 w-5 text-warning" />
                   <div>
                     <p className="text-sm font-semibold">{getProfileNameByUserId(userId)}</p>
-                    <p className="text-xs text-muted-foreground">{count} signed contract{count !== 1 ? "s" : ""}</p>
+                    <p className="text-xs text-muted-foreground">{count as number} contacted partner{(count as number) !== 1 ? "s" : ""}</p>
                   </div>
                 </CardContent>
               </Card>
