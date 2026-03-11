@@ -31,6 +31,7 @@ const Partners = () => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [syncing, setSyncing] = useState(false);
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ["partners"],
