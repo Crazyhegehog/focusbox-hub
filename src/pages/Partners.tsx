@@ -105,8 +105,8 @@ const Partners = () => {
   };
 
   // Signed contracts per user
-  const signedByUser = partners
-    .filter((p) => p.status === "signed" && p.created_by)
+  const contactedByUser = partners
+    .filter((p) => p.status === "sent_contract" && p.created_by)
     .reduce((acc, p) => {
       acc[p.created_by!] = (acc[p.created_by!] || 0) + 1;
       return acc;
