@@ -7,7 +7,7 @@ const corsHeaders = {
 
 const SMARTLEAD_BASE = "https://server.smartlead.ai/api/v1";
 const MATTHEW_USER_ID = "4a066397-68cf-47ee-86d7-436cd07ec6ce";
-const SENT_STATUSES = new Set(["INPROGRESS", "COMPLETED", "PAUSED", "STOPPED"]);
+const SENT_STATUSES = new Set(["INPROGRESS", "COMPLETED", "PAUSED", "STOPPED", "BLOCKED"]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
