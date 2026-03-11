@@ -291,6 +291,60 @@ const Partners = () => {
                           </Badge>
                         ) : "—"}
                       </TableCell>
+                      <TableCell>
+                        {(p as any).contract_url ? (
+                          <div className="flex items-center gap-1">
+                            <a
+                              href={supabase.storage.from("partner-contracts").getPublicUrl((p as any).contract_url).data.publicUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs">
+                                <FileText className="h-3 w-3" /> View
+                              </Button>
+                            </a>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              onClick={async () => {
+                                await supabase.storage.from("partner-contracts").remove([(p as any).contract_url]);
+                                updatePartner.mutate({ id: p.id, updates: { contract_url: null } });
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = ".pdf,.doc,.docx";
+                              input.onchange = async (e) => {
+                                const file = (e.target as HTMLInputElement).files?.[0];
+                                if (!file) return;
+                                const path = `${p.id}/${file.name}`;
+                                const { error: uploadError } = await supabase.storage
+                                  .from("partner-contracts")
+                                  .upload(path, file, { upsert: true });
+                                if (uploadError) {
+                                  toast({ title: "Upload failed", description: uploadError.message, variant: "destructive" });
+                                  return;
+                                }
+                                updatePartner.mutate({ id: p.id, updates: { contract_url: path } });
+                                toast({ title: "Contract uploaded" });
+                              };
+                              input.click();
+                            }}
+                          >
+                            <Upload className="h-3 w-3" /> Upload
+                          </Button>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <PartnerNotesSheet partnerId={p.id} partnerName={p.name || p.email} />
