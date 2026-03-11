@@ -126,6 +126,10 @@ const Partners = () => {
           <p className="text-muted-foreground font-body mt-1">Manage partner pipeline</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={syncSmartlead} disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Refresh Smartlead"}
+          </Button>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[150px] h-9">
               <SelectValue />
