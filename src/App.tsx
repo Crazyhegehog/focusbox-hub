@@ -11,6 +11,7 @@ import Partners from "./pages/Partners";
 import EmailTemplates from "./pages/EmailTemplates";
 import PartnerBrief from "./pages/PartnerBrief";
 import PartnerContract from "./pages/PartnerContract";
+import PartnerTypes from "./pages/PartnerTypes";
 import Todos from "./pages/Todos";
 import CalendarPage from "./pages/CalendarPage";
 import NotFound from "./pages/NotFound";
