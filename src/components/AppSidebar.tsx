@@ -4,6 +4,7 @@ import {
   Mail,
   FileText,
   ScrollText,
+  Tags,
   CheckSquare,
   CalendarDays,
   LogOut,
