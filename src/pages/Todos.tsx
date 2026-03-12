@@ -197,7 +197,6 @@ const Todos = () => {
         responsible_id: taskForm.responsibleId === "none" ? null : taskForm.responsibleId,
         start_date: taskForm.startDate || null,
         due_date: taskForm.dueDate || null,
-        completed_at: taskForm.status === "completed" ? new Date().toISOString() : null,
       };
 
       if (taskForm.id) {
@@ -272,10 +271,7 @@ const Todos = () => {
     mutationFn: async ({ id, status }: { id: string; status: TodoStatus }) => {
       const { error } = await supabase
         .from("todos")
-        .update({
-          status,
-          completed_at: status === "completed" ? new Date().toISOString() : null,
-        })
+        .update({ status })
         .eq("id", id);
       if (error) throw error;
     },
