@@ -271,10 +271,7 @@ const Todos = () => {
     mutationFn: async ({ id, status }: { id: string; status: TodoStatus }) => {
       const { error } = await supabase
         .from("todos")
-        .update({
-          status,
-          completed_at: status === "completed" ? new Date().toISOString() : null,
-        })
+        .update({ status })
         .eq("id", id);
       if (error) throw error;
     },
