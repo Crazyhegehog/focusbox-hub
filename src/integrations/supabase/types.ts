@@ -411,6 +411,30 @@ export type Database = {
           },
         ]
       }
+      partner_types: {
+        Row: {
+          city: string
+          created_at: string
+          created_by: string | null
+          id: string
+          partner_type: string
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          partner_type: string
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          partner_type?: string
+        }
+        Relationships: []
+      }
       partners: {
         Row: {
           contract_url: string | null

@@ -11,6 +11,7 @@ import Partners from "./pages/Partners";
 import EmailTemplates from "./pages/EmailTemplates";
 import PartnerBrief from "./pages/PartnerBrief";
 import PartnerContract from "./pages/PartnerContract";
+import PartnerTypes from "./pages/PartnerTypes";
 import Todos from "./pages/Todos";
 import CalendarPage from "./pages/CalendarPage";
 import NotFound from "./pages/NotFound";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/email-templates" element={<AppLayout><EmailTemplates /></AppLayout>} />
             <Route path="/partner-brief" element={<AppLayout><PartnerBrief /></AppLayout>} />
             <Route path="/partner-contract" element={<AppLayout><PartnerContract /></AppLayout>} />
+            <Route path="/partner-types" element={<AppLayout><PartnerTypes /></AppLayout>} />
             <Route path="/todos" element={<AppLayout><Todos /></AppLayout>} />
             <Route path="/calendar" element={<AppLayout><CalendarPage /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
