@@ -43,6 +43,7 @@ const sections = [
       { title: "Email Templates", url: "/email-templates", icon: Mail },
       { title: "Partner Brief", url: "/partner-brief", icon: FileText },
       { title: "Partner Contract", url: "/partner-contract", icon: ScrollText },
+      { title: "Partner Types", url: "/partner-types", icon: Tags },
     ],
   },
   {
