@@ -197,7 +197,6 @@ const Todos = () => {
         responsible_id: taskForm.responsibleId === "none" ? null : taskForm.responsibleId,
         start_date: taskForm.startDate || null,
         due_date: taskForm.dueDate || null,
-        completed_at: taskForm.status === "completed" ? new Date().toISOString() : null,
       };
 
       if (taskForm.id) {
