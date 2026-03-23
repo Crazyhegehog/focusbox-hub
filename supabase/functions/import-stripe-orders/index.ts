@@ -149,6 +149,7 @@ Deno.serve(async (req) => {
           payment_status: session.payment_status,
           mode: session.mode,
           locale: session.locale,
+          custom_fields: session.custom_fields || [],
           line_items: lineItemsData.map((item: any) => ({
             description: item.description,
             quantity: item.quantity,
@@ -159,7 +160,7 @@ Deno.serve(async (req) => {
           })),
         };
 
-        // Auto-detect phone size from metadata, product names, descriptions
+        // Auto-detect phone size from metadata, custom fields, product names, descriptions
         let phoneSize =
           session.metadata?.phone_size ||
           session.metadata?.Phone_Size ||
@@ -170,6 +171,26 @@ Deno.serve(async (req) => {
           session.metadata?.Phone_Model ||
           session.metadata?.model ||
           "";
+
+        // Check custom_fields (Stripe Checkout custom fields)
+        if (!phoneSize && Array.isArray(session.custom_fields)) {
+          for (const field of session.custom_fields) {
+            const key = (field.key || field.label?.custom || "").toLowerCase();
+            const val = field.text?.value || field.dropdown?.value || field.numeric?.value || "";
+            if (val && (key.includes("phone") || key.includes("model") || key.includes("size") || key.includes("handy") || key.includes("gerät") || key.includes("device"))) {
+              phoneSize = val;
+              break;
+            }
+            // If no key match, try detecting phone model from the value
+            if (val && !phoneSize) {
+              const detected = detectPhoneSize(val);
+              if (detected) {
+                phoneSize = val; // Use full value, not just regex match
+                break;
+              }
+            }
+          }
+        }
 
         if (!phoneSize) {
           // Check product metadata
@@ -195,6 +216,17 @@ Deno.serve(async (req) => {
           ].join(" ");
 
           phoneSize = detectPhoneSize(searchTexts);
+        }
+
+        // Last resort: if still empty, use any custom_field value that looks like a phone
+        if (!phoneSize && Array.isArray(session.custom_fields)) {
+          for (const field of session.custom_fields) {
+            const val = field.text?.value || field.dropdown?.value || "";
+            if (val) {
+              phoneSize = val;
+              break;
+            }
+          }
         }
 
         const { data: order, error: orderError } = await supabase
