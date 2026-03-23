@@ -77,8 +77,9 @@ Deno.serve(async (req) => {
       const params = new URLSearchParams({
         limit: "100",
         status: "complete",
-        "expand[]": "data.customer_details",
       });
+      params.append("expand[]", "data.customer_details");
+      params.append("expand[]", "data.custom_fields");
       if (startingAfter) params.set("starting_after", startingAfter);
 
       const sessionsRes = await fetch(
