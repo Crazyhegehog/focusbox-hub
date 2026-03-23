@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
 
       // Retrieve full session with all details expanded
       const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
-        expand: ["customer", "line_items", "line_items.data.price.product"],
+        expand: ["customer", "line_items", "line_items.data.price.product", "custom_fields"],
       });
 
       // Use line items from expanded session, or fetch separately
