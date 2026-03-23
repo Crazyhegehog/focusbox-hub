@@ -75,14 +75,52 @@ Deno.serve(async (req) => {
             return p?.name || i.description || "";
           }).filter(Boolean).join(", ");
 
-          // Try to detect phone model from product names/metadata
-          const searchText = items.map((i: any) => {
-            const p = typeof i.price?.product === "object" ? i.price.product : null;
-            return [p?.name, p?.description, i.description, JSON.stringify(p?.metadata || {})].join(" ");
-          }).join(" ");
-          
-          const phoneMatch = searchText.match(/iphone\s*\d+\s*(pro\s*max|pro|plus|mini)?/i);
-          if (phoneMatch) phoneModel = phoneMatch[0].trim();
+          // 1. Check session metadata
+          phoneModel = session.metadata?.phone_size || session.metadata?.Phone_Size || 
+            session.metadata?.phoneSize || session.metadata?.size || session.metadata?.Size ||
+            session.metadata?.phone_model || session.metadata?.Phone_Model || session.metadata?.model || "";
+
+          // 2. Check custom_fields (Stripe Checkout custom fields)
+          if (!phoneModel && Array.isArray(session.custom_fields)) {
+            for (const field of session.custom_fields) {
+              const key = (field.key || field.label?.custom || "").toLowerCase();
+              const val = field.text?.value || field.dropdown?.value || field.numeric?.value || "";
+              if (val && (key.includes("phone") || key.includes("model") || key.includes("size") || key.includes("handy") || key.includes("gerät") || key.includes("device"))) {
+                phoneModel = val;
+                break;
+              }
+            }
+          }
+
+          // 3. Check custom_fields - any value as fallback
+          if (!phoneModel && Array.isArray(session.custom_fields)) {
+            for (const field of session.custom_fields) {
+              const val = field.text?.value || field.dropdown?.value || "";
+              if (val) { phoneModel = val; break; }
+            }
+          }
+
+          // 4. Check product metadata
+          if (!phoneModel) {
+            for (const item of items) {
+              const p = typeof item.price?.product === "object" ? item.price.product : null;
+              if (p?.metadata) {
+                phoneModel = p.metadata.phone_size || p.metadata.size || p.metadata.model || "";
+                if (phoneModel) break;
+              }
+            }
+          }
+
+          // 5. Auto-detect from product names/descriptions
+          if (!phoneModel) {
+            const searchText = items.map((i: any) => {
+              const p = typeof i.price?.product === "object" ? i.price.product : null;
+              return [p?.name, p?.description, i.description, JSON.stringify(p?.metadata || {})].join(" ");
+            }).join(" ");
+            
+            const phoneMatch = searchText.match(/iphone\s*\d+\s*(pro\s*max|pro|plus|mini)?/i);
+            if (phoneMatch) phoneModel = phoneMatch[0].trim();
+          }
         } catch (_) { /* ignore */ }
 
         const shipping = session.shipping_details;
@@ -109,6 +147,10 @@ Deno.serve(async (req) => {
           order_status: "paid",
           created_at: new Date(session.created * 1000).toISOString(),
           product_name: productName,
+          stripe_metadata: {
+            session_metadata: session.metadata || {},
+            custom_fields: session.custom_fields || [],
+          },
         });
       }
 

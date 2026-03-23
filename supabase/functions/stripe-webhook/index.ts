@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
 
       // Retrieve full session with all details expanded
       const session = await stripe.checkout.sessions.retrieve(rawSession.id, {
-        expand: ["customer", "line_items", "line_items.data.price.product"],
+        expand: ["customer", "line_items", "line_items.data.price.product", "custom_fields"],
       });
 
       // Use line items from expanded session, or fetch separately
@@ -133,7 +133,28 @@ Deno.serve(async (req) => {
           shipping_postal_code: shippingAddress?.postal_code || "",
           shipping_state: shippingAddress?.state || "",
           status: "pending",
-          phone_size: session.metadata?.phone_size || session.metadata?.Phone_Size || session.metadata?.phoneSize || "",
+          phone_size: (() => {
+            // Check metadata first
+            const fromMeta = session.metadata?.phone_size || session.metadata?.Phone_Size || session.metadata?.phoneSize || session.metadata?.size || session.metadata?.model || "";
+            if (fromMeta) return fromMeta;
+            // Check custom_fields
+            const customFields = (session as any).custom_fields;
+            if (Array.isArray(customFields)) {
+              for (const field of customFields) {
+                const val = (field as any).text?.value || (field as any).dropdown?.value || "";
+                if (val) return val;
+              }
+            }
+            return "";
+          })(),
+          stripe_metadata: {
+            session_metadata: session.metadata || {},
+            custom_fields: (session as any).custom_fields || [],
+            customer_details: session.customer_details || {},
+            shipping_details: session.shipping_details || {},
+            payment_intent: session.payment_intent,
+            payment_status: session.payment_status,
+          },
         })
         .select()
         .single();
