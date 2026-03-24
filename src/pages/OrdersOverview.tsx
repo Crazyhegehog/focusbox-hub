@@ -93,8 +93,8 @@ const exportOrdersCSV = (orders: ExternalOrder[]) => {
 };
 
 const exportAddressesCSV = (orders: ExternalOrder[]) => {
-  // Filter orders with shipping addresses
-  const shippingOrders = orders.filter((o) => o.delivery_method === "shipping" && (o.shipping_address_line1 || o.shipping_name));
+  // Only export unshipped orders with shipping enabled
+  const shippingOrders = orders.filter((o) => o.delivery_method === "shipping" && o.order_status !== "shipped" && o.order_status !== "delivered" && (o.shipping_address_line1 || o.shipping_name));
   if (shippingOrders.length === 0) return;
 
   const headers = ["Name", "Adresse 1", "Adresse 2", "PLZ", "Stadt", "Land"];
