@@ -1077,8 +1077,16 @@ const OrdersOverview = () => {
                           <TableCell className="text-sm">
                             {unit.address ? (
                               <div>
-                                <div>{unit.address}</div>
-                                <div className="text-xs text-muted-foreground">{[unit.postalCode, unit.city].filter(Boolean).join(" ")}</div>
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([unit.address, unit.postalCode, unit.city, unit.country].filter(Boolean).join(", "))}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline flex items-center gap-1"
+                                >
+                                  <MapPin className="h-3 w-3 shrink-0" />
+                                  {unit.address}
+                                </a>
+                                <div className="text-xs text-muted-foreground ml-4">{[unit.postalCode, unit.city].filter(Boolean).join(" ")}</div>
                               </div>
                             ) : (
                               <span className="text-muted-foreground">—</span>
