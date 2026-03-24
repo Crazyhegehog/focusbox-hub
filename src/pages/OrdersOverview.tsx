@@ -672,6 +672,26 @@ const OrdersOverview = () => {
     return units;
   }, [orders]);
 
+  // Production stats: all undelivered orders by box size
+  const productionStats = useMemo(() => {
+    const stats = { S: 0, M: 0, L: 0, unknown: 0, total: 0, byModel: {} as Record<string, { count: number; boxSize: string }> };
+    for (const order of orders) {
+      if (order.order_status === "shipped" || order.order_status === "delivered") continue;
+      const qty = order.quantity || 1;
+      const box = getBoxSize(order.phone_model);
+      const model = order.phone_model || "Unbekannt";
+      if (box === "S") stats.S += qty;
+      else if (box === "M") stats.M += qty;
+      else if (box === "L") stats.L += qty;
+      else stats.unknown += qty;
+      stats.total += qty;
+      if (!stats.byModel[model]) stats.byModel[model] = { count: 0, boxSize: box };
+      stats.byModel[model].count += qty;
+    }
+    return stats;
+  }, [orders]);
+
+
   const handleSendEmail = (status: string) => {
     const emails = getEmailsByStatus(orders, status);
     if (emails.length === 0) {
@@ -768,6 +788,9 @@ const OrdersOverview = () => {
             {localUnits.length > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{localUnits.length}</Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="production" className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5" /> Produktion
           </TabsTrigger>
         </TabsList>
 
@@ -1134,6 +1157,65 @@ const OrdersOverview = () => {
                   </Table>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="production" className="space-y-6 mt-4">
+          {/* Production Overview */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total zu produzieren</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold">{productionStats.total}</p></CardContent>
+            </Card>
+            <Card className="border-blue-500/30">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-blue-500/15 text-blue-600 border-blue-500/30">S</Badge> Small (Mini)</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold text-blue-600">{productionStats.S}</p></CardContent>
+            </Card>
+            <Card className="border-amber-500/30">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/30">M</Badge> Medium (Normal/Pro)</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold text-amber-600">{productionStats.M}</p></CardContent>
+            </Card>
+            <Card className="border-purple-500/30">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-purple-500/15 text-purple-600 border-purple-500/30">L</Badge> Large (Plus/Max)</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold text-purple-600">{productionStats.L}</p></CardContent>
+            </Card>
+          </div>
+
+          {/* Breakdown by Model */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Aufschlüsselung nach Modell</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Modell</TableHead>
+                    <TableHead className="text-center">Box-Grösse</TableHead>
+                    <TableHead className="text-center">Anzahl</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(productionStats.byModel)
+                    .sort(([, a], [, b]) => b.count - a.count)
+                    .map(([model, { count, boxSize }]) => (
+                      <TableRow key={model}>
+                        <TableCell className="font-medium">{model}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={
+                            boxSize === "S" ? "bg-blue-500/15 text-blue-600 border-blue-500/30" :
+                            boxSize === "M" ? "bg-amber-500/15 text-amber-600 border-amber-500/30" :
+                            boxSize === "L" ? "bg-purple-500/15 text-purple-600 border-purple-500/30" : ""
+                          }>
+                            {boxSize}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-bold">{count}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
