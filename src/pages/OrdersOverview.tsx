@@ -637,7 +637,7 @@ const OrdersOverview = () => {
     return stats;
   }, [unshippedUnits]);
 
-
+  const handleSendEmail = (status: string) => {
     const emails = getEmailsByStatus(orders, status);
     if (emails.length === 0) {
       toast({ title: "Keine E-Mails", description: `Keine Kunden mit Status "${statusConfig[status]?.label || status}" gefunden.` });
