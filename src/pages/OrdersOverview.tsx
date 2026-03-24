@@ -53,6 +53,15 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; class
 const formatAmount = (amount: number, currency: string = "chf") =>
   new Intl.NumberFormat("de-CH", { style: "currency", currency: currency.toUpperCase() }).format(amount / 100);
 
+const getBoxSize = (phoneModel: string): string => {
+  if (!phoneModel) return "—";
+  const lower = phoneModel.toLowerCase();
+  if (lower.includes("mini")) return "S";
+  if (lower.includes("plus") || lower.includes("max")) return "L";
+  // Normal + Pro (not Pro Max) → M
+  return "M";
+};
+
 const exportOrdersCSV = (orders: ExternalOrder[]) => {
   const headers = ["Name", "E-Mail", "Modell", "Menge", "Betrag", "Währung", "Versandart", "Status", "Versandname", "Adresse 1", "Adresse 2", "Stadt", "PLZ", "Land", "Datum", "Notizen"];
   const rows = orders.map((o) => [
