@@ -994,6 +994,8 @@ const OrdersOverview = () => {
                       <span className="truncate">{detailOrder.customer_email}</span>
                       <span className="text-muted-foreground">Modell</span>
                       <span className="font-medium">{detailOrder.phone_model || "—"}</span>
+                      <span className="text-muted-foreground">Box-Grösse</span>
+                      <span className="font-medium">{getBoxSize(detailOrder.phone_model)}</span>
                       <span className="text-muted-foreground">Menge</span>
                       <span className="font-medium">{detailOrder.quantity || 1}</span>
                       <span className="text-muted-foreground">Betrag</span>
