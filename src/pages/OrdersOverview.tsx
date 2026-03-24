@@ -156,7 +156,7 @@ const OrdersOverview = () => {
   const [importingAddresses, setImportingAddresses] = useState(false);
   const [importingSpreadsheet, setImportingSpreadsheet] = useState(false);
   const [importingStripe, setImportingStripe] = useState(false);
-
+  const [activeTab, setActiveTab] = useState("orders");
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["external-orders"],
     queryFn: async () => {
