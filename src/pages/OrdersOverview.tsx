@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { externalSupabase } from "@/integrations/external-supabase/client";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
@@ -155,7 +156,7 @@ const OrdersOverview = () => {
   const [importingAddresses, setImportingAddresses] = useState(false);
   const [importingSpreadsheet, setImportingSpreadsheet] = useState(false);
   const [importingStripe, setImportingStripe] = useState(false);
-
+  const [activeTab, setActiveTab] = useState("orders");
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["external-orders"],
     queryFn: async () => {
@@ -597,7 +598,46 @@ const OrdersOverview = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const handleSendEmail = (status: string) => {
+  // Build flat list of individual shipping units from orders
+  type ShippingUnit = { orderId: string; unitIndex: number; customerName: string; customerEmail: string; phoneModel: string; boxSize: string; shippingName: string; address: string; city: string; postalCode: string; country: string; deliveryMethod: string; orderStatus: string; };
+  const shippingUnits = useMemo(() => {
+    const units: ShippingUnit[] = [];
+    for (const order of orders) {
+      if (order.delivery_method !== "shipping") continue;
+      const qty = order.quantity || 1;
+      for (let i = 0; i < qty; i++) {
+        units.push({
+          orderId: order.id,
+          unitIndex: i,
+          customerName: order.customer_name,
+          customerEmail: order.customer_email,
+          phoneModel: order.phone_model || "",
+          boxSize: getBoxSize(order.phone_model),
+          shippingName: order.shipping_name || order.customer_name,
+          address: [order.shipping_address_line1, order.shipping_address_line2].filter(Boolean).join(", "),
+          city: order.shipping_city || "",
+          postalCode: order.shipping_postal_code || "",
+          country: order.shipping_country || "CH",
+          deliveryMethod: order.delivery_method,
+          orderStatus: order.order_status,
+        });
+      }
+    }
+    return units;
+  }, [orders]);
+
+  const unshippedUnits = shippingUnits.filter(u => u.orderStatus !== "shipped" && u.orderStatus !== "delivered");
+  const boxSizeStats = useMemo(() => {
+    const stats = { S: 0, M: 0, L: 0 };
+    for (const u of unshippedUnits) {
+      if (u.boxSize === "S") stats.S++;
+      else if (u.boxSize === "M") stats.M++;
+      else if (u.boxSize === "L") stats.L++;
+    }
+    return stats;
+  }, [unshippedUnits]);
+
+
     const emails = getEmailsByStatus(orders, status);
     if (emails.length === 0) {
       toast({ title: "Keine E-Mails", description: `Keine Kunden mit Status "${statusConfig[status]?.label || status}" gefunden.` });
@@ -678,6 +718,19 @@ const OrdersOverview = () => {
           </DropdownMenu>
         </div>
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="orders">Bestellungen</TabsTrigger>
+          <TabsTrigger value="shipping" className="flex items-center gap-1.5">
+            <Truck className="h-3.5 w-3.5" /> Versand
+            {unshippedUnits.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{unshippedUnits.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="orders" className="space-y-6 mt-4">
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -843,6 +896,98 @@ const OrdersOverview = () => {
           )}
         </CardContent>
       </Card>
+
+        </TabsContent>
+
+        <TabsContent value="shipping" className="space-y-6 mt-4">
+          {/* Shipping Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Noch zu versenden</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-bold">{unshippedUnits.length}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-blue-500/15 text-blue-600 border-blue-500/30">S</Badge> Small (Mini)</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-bold">{boxSizeStats.S}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/30">M</Badge> Medium (Normal/Pro)</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-bold">{boxSizeStats.M}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-purple-500/15 text-purple-600 border-purple-500/30">L</Badge> Large (Plus/Max)</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-bold">{boxSizeStats.L}</p></CardContent>
+            </Card>
+          </div>
+
+          {/* Shipping Queue */}
+          <Card>
+            <CardContent className="p-0">
+              {unshippedUnits.length === 0 ? (
+                <div className="py-16 text-center">
+                  <CheckCircle2 className="mx-auto h-12 w-12 text-success/30 mb-4" />
+                  <p className="text-muted-foreground font-medium">Alles versendet! 🎉</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Adresse</TableHead>
+                        <TableHead>PLZ / Ort</TableHead>
+                        <TableHead>Modell</TableHead>
+                        <TableHead className="text-center">Box</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Aktion</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {unshippedUnits.map((unit, idx) => (
+                        <TableRow key={`${unit.orderId}-${unit.unitIndex}`}>
+                          <TableCell>
+                            <div className="font-medium">{unit.shippingName}</div>
+                            <div className="text-xs text-muted-foreground">{unit.customerEmail}</div>
+                          </TableCell>
+                          <TableCell className="text-sm">{unit.address || "—"}</TableCell>
+                          <TableCell className="text-sm">{[unit.postalCode, unit.city].filter(Boolean).join(" ") || "—"}</TableCell>
+                          <TableCell className="text-sm font-medium">{unit.phoneModel || "—"}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className={
+                              unit.boxSize === "S" ? "bg-blue-500/15 text-blue-600 border-blue-500/30" :
+                              unit.boxSize === "M" ? "bg-amber-500/15 text-amber-600 border-amber-500/30" :
+                              unit.boxSize === "L" ? "bg-purple-500/15 text-purple-600 border-purple-500/30" : ""
+                            }>
+                              {unit.boxSize}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={statusConfig[unit.orderStatus]?.className || ""}>
+                              {statusConfig[unit.orderStatus]?.icon} {statusConfig[unit.orderStatus]?.label || unit.orderStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="gap-1.5"
+                              onClick={() => {
+                                updateStatus.mutate({ id: unit.orderId, status: "shipped" });
+                              }}
+                            >
+                              <Truck className="h-3.5 w-3.5" /> Versendet
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Detail Sheet */}
       <Sheet open={!!detailOrder} onOpenChange={() => setDetailOrder(null)}>
