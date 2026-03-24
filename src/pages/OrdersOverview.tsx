@@ -637,6 +637,40 @@ const OrdersOverview = () => {
     return stats;
   }, [unshippedUnits]);
 
+  // Local pickup / nearby delivery units
+  const LOCAL_CITIES = ["einsiedeln", "wollerau", "pfäffikon"];
+  const localUnits = useMemo(() => {
+    const units: (typeof shippingUnits[0] & { type: string })[] = [];
+    for (const order of orders) {
+      if (order.order_status === "shipped" || order.order_status === "delivered") continue;
+      const qty = order.quantity || 1;
+      const isPickup = order.delivery_method === "pickup" || order.delivery_method !== "shipping";
+      const isLocalShipping = order.delivery_method === "shipping" && LOCAL_CITIES.some(c => 
+        (order.shipping_city || "").toLowerCase().includes(c)
+      );
+      if (!isPickup && !isLocalShipping) continue;
+      for (let i = 0; i < qty; i++) {
+        units.push({
+          orderId: order.id,
+          unitIndex: i,
+          customerName: order.customer_name,
+          customerEmail: order.customer_email,
+          phoneModel: order.phone_model || "",
+          boxSize: getBoxSize(order.phone_model),
+          shippingName: order.shipping_name || order.customer_name,
+          address: [order.shipping_address_line1, order.shipping_address_line2].filter(Boolean).join(", "),
+          city: order.shipping_city || "",
+          postalCode: order.shipping_postal_code || "",
+          country: order.shipping_country || "CH",
+          deliveryMethod: order.delivery_method,
+          orderStatus: order.order_status,
+          type: isPickup ? "Abholung" : "Lokal",
+        });
+      }
+    }
+    return units;
+  }, [orders]);
+
   const handleSendEmail = (status: string) => {
     const emails = getEmailsByStatus(orders, status);
     if (emails.length === 0) {
@@ -726,6 +760,12 @@ const OrdersOverview = () => {
             <Truck className="h-3.5 w-3.5" /> Versand
             {unshippedUnits.length > 0 && (
               <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{unshippedUnits.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="local" className="flex items-center gap-1.5">
+            <ShoppingBag className="h-3.5 w-3.5" /> Abholung & Lokal
+            {localUnits.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{localUnits.length}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
@@ -976,6 +1016,105 @@ const OrdersOverview = () => {
                               }}
                             >
                               <Truck className="h-3.5 w-3.5" /> Versendet
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="local" className="space-y-6 mt-4">
+          {/* Local Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Abholungen & Lokal offen</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-bold">{localUnits.length}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Abholungen</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-bold">{localUnits.filter(u => u.type === "Abholung").length}</p></CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Lokale Lieferung</CardTitle></CardHeader>
+              <CardContent><p className="text-3xl font-bold">{localUnits.filter(u => u.type === "Lokal").length}</p></CardContent>
+            </Card>
+          </div>
+
+          {/* Local Queue */}
+          <Card>
+            <CardContent className="p-0">
+              {localUnits.length === 0 ? (
+                <div className="py-16 text-center">
+                  <CheckCircle2 className="mx-auto h-12 w-12 text-success/30 mb-4" />
+                  <p className="text-muted-foreground font-medium">Alle abgeholt / zugestellt! 🎉</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Adresse / Ort</TableHead>
+                        <TableHead>Modell</TableHead>
+                        <TableHead className="text-center">Box</TableHead>
+                        <TableHead>Typ</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Aktion</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {localUnits.map((unit) => (
+                        <TableRow key={`${unit.orderId}-local-${unit.unitIndex}`}>
+                          <TableCell>
+                            <div className="font-medium">{unit.customerName}</div>
+                            <div className="text-xs text-muted-foreground">{unit.customerEmail}</div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {unit.address ? (
+                              <div>
+                                <div>{unit.address}</div>
+                                <div className="text-xs text-muted-foreground">{[unit.postalCode, unit.city].filter(Boolean).join(" ")}</div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">{unit.phoneModel || "—"}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className={
+                              unit.boxSize === "S" ? "bg-blue-500/15 text-blue-600 border-blue-500/30" :
+                              unit.boxSize === "M" ? "bg-amber-500/15 text-amber-600 border-amber-500/30" :
+                              unit.boxSize === "L" ? "bg-purple-500/15 text-purple-600 border-purple-500/30" : ""
+                            }>
+                              {unit.boxSize}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={unit.type === "Abholung" ? "bg-info/15 text-info border-info/30" : "bg-accent text-accent-foreground"}>
+                              {unit.type === "Abholung" ? <ShoppingBag className="h-3 w-3 mr-1" /> : <MapPin className="h-3 w-3 mr-1" />}
+                              {unit.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={statusConfig[unit.orderStatus]?.className || ""}>
+                              {statusConfig[unit.orderStatus]?.icon} {statusConfig[unit.orderStatus]?.label || unit.orderStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="gap-1.5"
+                              onClick={() => {
+                                updateStatus.mutate({ id: unit.orderId, status: "delivered" });
+                              }}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Erledigt
                             </Button>
                           </TableCell>
                         </TableRow>
