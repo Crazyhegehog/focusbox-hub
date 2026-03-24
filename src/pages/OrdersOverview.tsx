@@ -598,7 +598,46 @@ const OrdersOverview = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const handleSendEmail = (status: string) => {
+  // Build flat list of individual shipping units from orders
+  type ShippingUnit = { orderId: string; unitIndex: number; customerName: string; customerEmail: string; phoneModel: string; boxSize: string; shippingName: string; address: string; city: string; postalCode: string; country: string; deliveryMethod: string; orderStatus: string; };
+  const shippingUnits = useMemo(() => {
+    const units: ShippingUnit[] = [];
+    for (const order of orders) {
+      if (order.delivery_method !== "shipping") continue;
+      const qty = order.quantity || 1;
+      for (let i = 0; i < qty; i++) {
+        units.push({
+          orderId: order.id,
+          unitIndex: i,
+          customerName: order.customer_name,
+          customerEmail: order.customer_email,
+          phoneModel: order.phone_model || "",
+          boxSize: getBoxSize(order.phone_model),
+          shippingName: order.shipping_name || order.customer_name,
+          address: [order.shipping_address_line1, order.shipping_address_line2].filter(Boolean).join(", "),
+          city: order.shipping_city || "",
+          postalCode: order.shipping_postal_code || "",
+          country: order.shipping_country || "CH",
+          deliveryMethod: order.delivery_method,
+          orderStatus: order.order_status,
+        });
+      }
+    }
+    return units;
+  }, [orders]);
+
+  const unshippedUnits = shippingUnits.filter(u => u.orderStatus !== "shipped" && u.orderStatus !== "delivered");
+  const boxSizeStats = useMemo(() => {
+    const stats = { S: 0, M: 0, L: 0 };
+    for (const u of unshippedUnits) {
+      if (u.boxSize === "S") stats.S++;
+      else if (u.boxSize === "M") stats.M++;
+      else if (u.boxSize === "L") stats.L++;
+    }
+    return stats;
+  }, [unshippedUnits]);
+
+
     const emails = getEmailsByStatus(orders, status);
     if (emails.length === 0) {
       toast({ title: "Keine E-Mails", description: `Keine Kunden mit Status "${statusConfig[status]?.label || status}" gefunden.` });
