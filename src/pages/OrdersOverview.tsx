@@ -672,7 +672,26 @@ const OrdersOverview = () => {
     return units;
   }, [orders]);
 
-  const handleSendEmail = (status: string) => {
+  // Production stats: all undelivered orders by box size
+  const productionStats = useMemo(() => {
+    const stats = { S: 0, M: 0, L: 0, unknown: 0, total: 0, byModel: {} as Record<string, { count: number; boxSize: string }> };
+    for (const order of orders) {
+      if (order.order_status === "shipped" || order.order_status === "delivered") continue;
+      const qty = order.quantity || 1;
+      const box = getBoxSize(order.phone_model);
+      const model = order.phone_model || "Unbekannt";
+      if (box === "S") stats.S += qty;
+      else if (box === "M") stats.M += qty;
+      else if (box === "L") stats.L += qty;
+      else stats.unknown += qty;
+      stats.total += qty;
+      if (!stats.byModel[model]) stats.byModel[model] = { count: 0, boxSize: box };
+      stats.byModel[model].count += qty;
+    }
+    return stats;
+  }, [orders]);
+
+
     const emails = getEmailsByStatus(orders, status);
     if (emails.length === 0) {
       toast({ title: "Keine E-Mails", description: `Keine Kunden mit Status "${statusConfig[status]?.label || status}" gefunden.` });
