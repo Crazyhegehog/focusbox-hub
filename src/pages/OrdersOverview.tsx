@@ -769,6 +769,9 @@ const OrdersOverview = () => {
               <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{localUnits.length}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="production" className="flex items-center gap-1.5">
+            <Package className="h-3.5 w-3.5" /> Produktion
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders" className="space-y-6 mt-4">
