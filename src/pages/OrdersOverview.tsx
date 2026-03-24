@@ -744,6 +744,7 @@ const OrdersOverview = () => {
                   <TableRow>
                     <TableHead>Kunde</TableHead>
                     <TableHead>Modell</TableHead>
+                    <TableHead className="text-center">Box</TableHead>
                     <TableHead className="text-center">Menge</TableHead>
                     <TableHead>Betrag</TableHead>
                     <TableHead>Versandart</TableHead>
