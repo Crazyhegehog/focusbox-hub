@@ -719,6 +719,19 @@ const OrdersOverview = () => {
         </div>
       </div>
 
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="orders">Bestellungen</TabsTrigger>
+          <TabsTrigger value="shipping" className="flex items-center gap-1.5">
+            <Truck className="h-3.5 w-3.5" /> Versand
+            {unshippedUnits.length > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs h-5 px-1.5">{unshippedUnits.length}</Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="orders" className="space-y-6 mt-4">
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
