@@ -1062,6 +1062,7 @@ const OrdersOverview = () => {
                         <TableHead>Name</TableHead>
                         <TableHead>Adresse / Ort</TableHead>
                         <TableHead>Modell</TableHead>
+                        <TableHead className="text-center">Menge</TableHead>
                         <TableHead className="text-center">Box</TableHead>
                         <TableHead>Typ</TableHead>
                         <TableHead>Status</TableHead>
