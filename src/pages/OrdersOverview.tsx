@@ -1095,6 +1095,7 @@ const OrdersOverview = () => {
                             )}
                           </TableCell>
                           <TableCell className="text-sm font-medium">{unit.phoneModel || "—"}</TableCell>
+                          <TableCell className="text-center font-medium">{unit.qty}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant="outline" className={
                               unit.boxSize === "S" ? "bg-blue-500/15 text-blue-600 border-blue-500/30" :
