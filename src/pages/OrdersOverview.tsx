@@ -53,6 +53,15 @@ const statusConfig: Record<string, { label: string; icon: React.ReactNode; class
 const formatAmount = (amount: number, currency: string = "chf") =>
   new Intl.NumberFormat("de-CH", { style: "currency", currency: currency.toUpperCase() }).format(amount / 100);
 
+const getBoxSize = (phoneModel: string): string => {
+  if (!phoneModel) return "—";
+  const lower = phoneModel.toLowerCase();
+  if (lower.includes("mini")) return "S";
+  if (lower.includes("plus") || lower.includes("max")) return "L";
+  // Normal + Pro (not Pro Max) → M
+  return "M";
+};
+
 const exportOrdersCSV = (orders: ExternalOrder[]) => {
   const headers = ["Name", "E-Mail", "Modell", "Menge", "Betrag", "Währung", "Versandart", "Status", "Versandname", "Adresse 1", "Adresse 2", "Stadt", "PLZ", "Land", "Datum", "Notizen"];
   const rows = orders.map((o) => [
@@ -735,6 +744,7 @@ const OrdersOverview = () => {
                   <TableRow>
                     <TableHead>Kunde</TableHead>
                     <TableHead>Modell</TableHead>
+                    <TableHead className="text-center">Box</TableHead>
                     <TableHead className="text-center">Menge</TableHead>
                     <TableHead>Betrag</TableHead>
                     <TableHead>Versandart</TableHead>
@@ -753,6 +763,16 @@ const OrdersOverview = () => {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{order.phone_model || "—"}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className={
+                          getBoxSize(order.phone_model) === "S" ? "bg-blue-500/15 text-blue-600 border-blue-500/30" :
+                          getBoxSize(order.phone_model) === "M" ? "bg-amber-500/15 text-amber-600 border-amber-500/30" :
+                          getBoxSize(order.phone_model) === "L" ? "bg-purple-500/15 text-purple-600 border-purple-500/30" :
+                          ""
+                        }>
+                          {getBoxSize(order.phone_model)}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-center">{order.quantity || 1}</TableCell>
                       <TableCell className="font-medium">{formatAmount(order.amount_total || 0, order.currency || "chf")}</TableCell>
                       <TableCell>
@@ -974,6 +994,8 @@ const OrdersOverview = () => {
                       <span className="truncate">{detailOrder.customer_email}</span>
                       <span className="text-muted-foreground">Modell</span>
                       <span className="font-medium">{detailOrder.phone_model || "—"}</span>
+                      <span className="text-muted-foreground">Box-Grösse</span>
+                      <span className="font-medium">{getBoxSize(detailOrder.phone_model)}</span>
                       <span className="text-muted-foreground">Menge</span>
                       <span className="font-medium">{detailOrder.quantity || 1}</span>
                       <span className="text-muted-foreground">Betrag</span>
