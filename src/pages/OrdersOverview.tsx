@@ -637,6 +637,40 @@ const OrdersOverview = () => {
     return stats;
   }, [unshippedUnits]);
 
+  // Local pickup / nearby delivery units
+  const LOCAL_CITIES = ["einsiedeln", "wollerau", "pfäffikon"];
+  const localUnits = useMemo(() => {
+    const units: (typeof shippingUnits[0] & { type: string })[] = [];
+    for (const order of orders) {
+      if (order.order_status === "shipped" || order.order_status === "delivered") continue;
+      const qty = order.quantity || 1;
+      const isPickup = order.delivery_method === "pickup" || order.delivery_method !== "shipping";
+      const isLocalShipping = order.delivery_method === "shipping" && LOCAL_CITIES.some(c => 
+        (order.shipping_city || "").toLowerCase().includes(c)
+      );
+      if (!isPickup && !isLocalShipping) continue;
+      for (let i = 0; i < qty; i++) {
+        units.push({
+          orderId: order.id,
+          unitIndex: i,
+          customerName: order.customer_name,
+          customerEmail: order.customer_email,
+          phoneModel: order.phone_model || "",
+          boxSize: getBoxSize(order.phone_model),
+          shippingName: order.shipping_name || order.customer_name,
+          address: [order.shipping_address_line1, order.shipping_address_line2].filter(Boolean).join(", "),
+          city: order.shipping_city || "",
+          postalCode: order.shipping_postal_code || "",
+          country: order.shipping_country || "CH",
+          deliveryMethod: order.delivery_method,
+          orderStatus: order.order_status,
+          type: isPickup ? "Abholung" : "Lokal",
+        });
+      }
+    }
+    return units;
+  }, [orders]);
+
   const handleSendEmail = (status: string) => {
     const emails = getEmailsByStatus(orders, status);
     if (emails.length === 0) {
