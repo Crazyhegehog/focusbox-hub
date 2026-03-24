@@ -1160,6 +1160,65 @@ const OrdersOverview = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="production" className="space-y-6 mt-4">
+          {/* Production Overview */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total zu produzieren</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold">{productionStats.total}</p></CardContent>
+            </Card>
+            <Card className="border-blue-500/30">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-blue-500/15 text-blue-600 border-blue-500/30">S</Badge> Small (Mini)</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold text-blue-600">{productionStats.S}</p></CardContent>
+            </Card>
+            <Card className="border-amber-500/30">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-amber-500/15 text-amber-600 border-amber-500/30">M</Badge> Medium (Normal/Pro)</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold text-amber-600">{productionStats.M}</p></CardContent>
+            </Card>
+            <Card className="border-purple-500/30">
+              <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5"><Badge variant="outline" className="bg-purple-500/15 text-purple-600 border-purple-500/30">L</Badge> Large (Plus/Max)</CardTitle></CardHeader>
+              <CardContent><p className="text-4xl font-bold text-purple-600">{productionStats.L}</p></CardContent>
+            </Card>
+          </div>
+
+          {/* Breakdown by Model */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Aufschlüsselung nach Modell</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Modell</TableHead>
+                    <TableHead className="text-center">Box-Grösse</TableHead>
+                    <TableHead className="text-center">Anzahl</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(productionStats.byModel)
+                    .sort(([, a], [, b]) => b.count - a.count)
+                    .map(([model, { count, boxSize }]) => (
+                      <TableRow key={model}>
+                        <TableCell className="font-medium">{model}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className={
+                            boxSize === "S" ? "bg-blue-500/15 text-blue-600 border-blue-500/30" :
+                            boxSize === "M" ? "bg-amber-500/15 text-amber-600 border-amber-500/30" :
+                            boxSize === "L" ? "bg-purple-500/15 text-purple-600 border-purple-500/30" : ""
+                          }>
+                            {boxSize}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center font-bold">{count}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Detail Sheet */}
