@@ -517,6 +517,7 @@ const OrdersOverview = () => {
         if (s.stripe_payment_intent && existingIntents.has(s.stripe_payment_intent)) { skipped++; continue; }
         if (s.customer_email && existingEmails.has(s.customer_email.trim().toLowerCase())) { skipped++; continue; }
 
+        console.log(`Importing order: ${s.customer_name || s.customer_email}, amount_total=${s.amount_total}, currency=${s.currency}`);
         const { error: insertError } = await externalSupabase.from("orders").insert({
           customer_name: s.customer_name || s.customer_email || "Stripe Kunde",
           customer_email: s.customer_email || "",
