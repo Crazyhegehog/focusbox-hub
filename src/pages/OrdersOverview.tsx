@@ -187,7 +187,9 @@ const OrdersOverview = () => {
           const mergeUpdates: Record<string, any> = {};
           for (const [key, val] of Object.entries(u)) {
             if (["id", "created_at", "updated_at", "customer_name"].includes(key)) continue;
-            if (val && val !== "" && val !== 0 && (!match[key] || match[key] === "" || match[key] === null)) {
+            if (val && val !== "" && val !== 0 && (!match[key] || match[key] === "" || match[key] === null || match[key] === 0)) {
+              // For amount_total: always prefer higher value (cents) to prevent 29 overwriting 2900
+              if (key === "amount_total" && match[key] && match[key] > val) continue;
               mergeUpdates[key] = val;
             }
           }
@@ -214,7 +216,8 @@ const OrdersOverview = () => {
           const mergeUpdates: Record<string, any> = {};
           for (const [k, v] of Object.entries(o)) {
             if (["id", "created_at", "updated_at"].includes(k)) continue;
-            if (v && v !== "" && v !== 0 && (!existing[k] || existing[k] === "" || existing[k] === null)) {
+            if (v && v !== "" && v !== 0 && (!existing[k] || existing[k] === "" || existing[k] === null || existing[k] === 0)) {
+              if (k === "amount_total" && existing[k] && existing[k] > v) continue;
               mergeUpdates[k] = v;
             }
           }
@@ -517,6 +520,7 @@ const OrdersOverview = () => {
         if (s.stripe_payment_intent && existingIntents.has(s.stripe_payment_intent)) { skipped++; continue; }
         if (s.customer_email && existingEmails.has(s.customer_email.trim().toLowerCase())) { skipped++; continue; }
 
+        console.log(`Importing order: ${s.customer_name || s.customer_email}, amount_total=${s.amount_total}, currency=${s.currency}`);
         const { error: insertError } = await externalSupabase.from("orders").insert({
           customer_name: s.customer_name || s.customer_email || "Stripe Kunde",
           customer_email: s.customer_email || "",
