@@ -126,7 +126,24 @@ Deno.serve(async (req) => {
         const shipping = session.shipping_details;
         const cd = session.customer_details;
         const addr = shipping?.address || cd?.address;
-        const totalQty = 1; // Default
+
+        // Calculate quantity from line items
+        let totalQty = 1;
+        let lineItemsTotal = 0;
+        try {
+          const liRes2 = await fetch(
+            `https://api.stripe.com/v1/checkout/sessions/${session.id}/line_items?limit=100`,
+            { headers: { Authorization: `Bearer ${STRIPE_SECRET_KEY}` } }
+          );
+          const liData2 = await liRes2.json();
+          const items2 = liData2.data || [];
+          totalQty = items2.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0) || 1;
+          lineItemsTotal = items2.reduce((sum: number, item: any) => sum + (item.amount_total || 0), 0);
+        } catch (_) { /* use defaults */ }
+
+        // Use session.amount_total (in cents from Stripe), fallback to line items total
+        const amountTotal = session.amount_total || lineItemsTotal || 0;
+        console.log(`Session ${session.id}: amount_total=${session.amount_total}, lineItemsTotal=${lineItemsTotal}, using=${amountTotal}, qty=${totalQty}`);
 
         allSessions.push({
           stripe_session_id: session.id,
@@ -135,7 +152,7 @@ Deno.serve(async (req) => {
           customer_email: session.customer_email || cd?.email || "",
           phone_model: phoneModel,
           quantity: totalQty,
-          amount_total: session.amount_total || 0,
+          amount_total: amountTotal,
           currency: session.currency || "chf",
           delivery_method: addr ? "shipping" : "pickup",
           shipping_name: shipping?.name || cd?.name || "",
