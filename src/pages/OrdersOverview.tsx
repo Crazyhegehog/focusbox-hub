@@ -187,7 +187,9 @@ const OrdersOverview = () => {
           const mergeUpdates: Record<string, any> = {};
           for (const [key, val] of Object.entries(u)) {
             if (["id", "created_at", "updated_at", "customer_name"].includes(key)) continue;
-            if (val && val !== "" && val !== 0 && (!match[key] || match[key] === "" || match[key] === null)) {
+            if (val && val !== "" && val !== 0 && (!match[key] || match[key] === "" || match[key] === null || match[key] === 0)) {
+              // For amount_total: always prefer higher value (cents) to prevent 29 overwriting 2900
+              if (key === "amount_total" && match[key] && match[key] > val) continue;
               mergeUpdates[key] = val;
             }
           }
