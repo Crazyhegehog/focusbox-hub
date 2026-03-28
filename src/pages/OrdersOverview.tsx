@@ -1166,6 +1166,53 @@ const OrdersOverview = () => {
         </TabsContent>
 
         <TabsContent value="production" className="space-y-6 mt-4">
+          {/* BambuLab Export */}
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const payload = {
+                  timestamp: new Date().toISOString(),
+                  total: productionStats.total,
+                  sizes: { S: productionStats.S, M: productionStats.M, L: productionStats.L },
+                  models: Object.entries(productionStats.byModel).map(([model, { count, boxSize }]) => ({
+                    model, count, boxSize,
+                  })),
+                };
+                const json = JSON.stringify(payload, null, 2);
+                navigator.clipboard.writeText(json);
+                toast({ title: "JSON kopiert", description: "Produktionsdaten in Zwischenablage kopiert — bereit für BambuLab Script." });
+              }}
+            >
+              📋 JSON kopieren
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const payload = {
+                  timestamp: new Date().toISOString(),
+                  total: productionStats.total,
+                  sizes: { S: productionStats.S, M: productionStats.M, L: productionStats.L },
+                  models: Object.entries(productionStats.byModel).map(([model, { count, boxSize }]) => ({
+                    model, count, boxSize,
+                  })),
+                };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `bambulab-queue-${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                toast({ title: "JSON exportiert", description: "Datei heruntergeladen für BambuLab Farm Manager." });
+              }}
+            >
+              <Download className="h-4 w-4 mr-1.5" /> JSON Export
+            </Button>
+          </div>
+
           {/* Production Overview */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
