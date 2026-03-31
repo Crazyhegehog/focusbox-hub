@@ -725,8 +725,44 @@ const OrdersOverview = () => {
     window.open(mailto, "_blank");
     toast({ title: `${emails.length} Empfänger`, description: `E-Mail-Client geöffnet für "${statusConfig[status]?.label}" Bestellungen.` });
   };
+  const handleCreateOrder = async () => {
+    if (!newOrder.customer_name.trim()) {
+      toast({ title: "Name erforderlich", variant: "destructive" });
+      return;
+    }
+    const amountInCents = Math.round(newOrder.amount_total * 100);
+    const { error } = await externalSupabase.from("orders").insert({
+      customer_name: newOrder.customer_name,
+      customer_email: newOrder.customer_email,
+      phone_model: newOrder.phone_model,
+      quantity: newOrder.quantity,
+      amount_total: amountInCents,
+      currency: newOrder.currency,
+      delivery_method: newOrder.delivery_method,
+      order_status: newOrder.order_status,
+      shipping_name: newOrder.shipping_name || newOrder.customer_name,
+      shipping_address_line1: newOrder.shipping_address_line1,
+      shipping_city: newOrder.shipping_city,
+      shipping_postal_code: newOrder.shipping_postal_code,
+      shipping_country: newOrder.shipping_country,
+      notes: [newOrder.payment_method !== "stripe" ? `Zahlungsart: ${newOrder.payment_method}` : "", newOrder.notes].filter(Boolean).join("\n"),
+    });
+    if (error) {
+      toast({ title: "Fehler", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Bestellung erstellt" });
+      queryClient.invalidateQueries({ queryKey: ["external-orders"] });
+      setShowCreateDialog(false);
+      setNewOrder({
+        customer_name: "", customer_email: "", phone_model: "", quantity: 1, amount_total: 0,
+        currency: "chf", delivery_method: "shipping", payment_method: "stripe", order_status: "paid",
+        shipping_name: "", shipping_address_line1: "", shipping_city: "", shipping_postal_code: "",
+        shipping_country: "CH", notes: "",
+      });
+    }
+  };
 
-  return (
+
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
