@@ -14,6 +14,7 @@ import PartnerContract from "./pages/PartnerContract";
 import PartnerTypes from "./pages/PartnerTypes";
 import Todos from "./pages/Todos";
 import CalendarPage from "./pages/CalendarPage";
+import StockPlanning from "./pages/StockPlanning";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/partner-types" element={<AppLayout><PartnerTypes /></AppLayout>} />
             <Route path="/todos" element={<AppLayout><Todos /></AppLayout>} />
             <Route path="/calendar" element={<AppLayout><CalendarPage /></AppLayout>} />
+            <Route path="/lager" element={<AppLayout><StockPlanning /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
