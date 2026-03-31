@@ -14,7 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
-import { Package, Search, MapPin, Mail, Pencil, Save, X, Truck, ShoppingBag, CheckCircle2, Clock, CreditCard, StickyNote, Trash2, Download, Send, RefreshCw, Phone } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Package, Search, MapPin, Mail, Pencil, Save, X, Truck, ShoppingBag, CheckCircle2, Clock, CreditCard, StickyNote, Trash2, Download, Send, RefreshCw, Phone, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ExternalOrder = {
