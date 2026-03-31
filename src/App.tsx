@@ -14,6 +14,7 @@ import PartnerContract from "./pages/PartnerContract";
 import PartnerTypes from "./pages/PartnerTypes";
 import Todos from "./pages/Todos";
 import CalendarPage from "./pages/CalendarPage";
+import StockPlanning from "./pages/StockPlanning";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
