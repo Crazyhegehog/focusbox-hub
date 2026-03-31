@@ -38,6 +38,7 @@ const App = () => (
             <Route path="/partner-types" element={<AppLayout><PartnerTypes /></AppLayout>} />
             <Route path="/todos" element={<AppLayout><Todos /></AppLayout>} />
             <Route path="/calendar" element={<AppLayout><CalendarPage /></AppLayout>} />
+            <Route path="/lager" element={<AppLayout><StockPlanning /></AppLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

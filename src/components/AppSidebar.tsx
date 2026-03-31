@@ -35,6 +35,7 @@ const sections = [
     title: "Packages",
     items: [
       { title: "Orders", url: "/orders", icon: ClipboardList },
+      { title: "Lagerbestand", url: "/lager", icon: Package },
     ],
   },
   {
