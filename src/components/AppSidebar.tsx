@@ -7,6 +7,7 @@ import {
   Tags,
   CheckSquare,
   CalendarDays,
+  Package,
   LogOut,
   ChevronDown,
 } from "lucide-react";
