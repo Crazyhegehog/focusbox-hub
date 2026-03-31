@@ -1584,6 +1584,114 @@ const OrdersOverview = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Create Order Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Neue Bestellung erstellen</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Name *</Label>
+                <Input value={newOrder.customer_name} onChange={e => setNewOrder(p => ({ ...p, customer_name: e.target.value }))} placeholder="Max Muster" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>E-Mail</Label>
+                <Input value={newOrder.customer_email} onChange={e => setNewOrder(p => ({ ...p, customer_email: e.target.value }))} placeholder="max@example.com" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Handy-Modell</Label>
+                <Input value={newOrder.phone_model} onChange={e => setNewOrder(p => ({ ...p, phone_model: e.target.value }))} placeholder="iPhone 16 Pro" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Menge</Label>
+                <Input type="number" min={1} value={newOrder.quantity} onChange={e => setNewOrder(p => ({ ...p, quantity: parseInt(e.target.value) || 1 }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label>Betrag (CHF)</Label>
+                <Input type="number" step="0.01" min={0} value={newOrder.amount_total} onChange={e => setNewOrder(p => ({ ...p, amount_total: parseFloat(e.target.value) || 0 }))} placeholder="29.00" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Zahlungsart</Label>
+                <Select value={newOrder.payment_method} onValueChange={v => setNewOrder(p => ({ ...p, payment_method: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="stripe">Stripe (Online)</SelectItem>
+                    <SelectItem value="cash">Bargeld</SelectItem>
+                    <SelectItem value="twint">TWINT</SelectItem>
+                    <SelectItem value="bank_transfer">Banküberweisung</SelectItem>
+                    <SelectItem value="invoice">Rechnung</SelectItem>
+                    <SelectItem value="other">Andere</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={newOrder.order_status} onValueChange={v => setNewOrder(p => ({ ...p, order_status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ORDER_STATUSES.map(s => (
+                      <SelectItem key={s} value={s}>{statusConfig[s]?.label || s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Lieferart</Label>
+                <Select value={newOrder.delivery_method} onValueChange={v => setNewOrder(p => ({ ...p, delivery_method: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="shipping">Versand</SelectItem>
+                    <SelectItem value="pickup">Abholung</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Währung</Label>
+                <Select value={newOrder.currency} onValueChange={v => setNewOrder(p => ({ ...p, currency: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="chf">CHF</SelectItem>
+                    <SelectItem value="eur">EUR</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {newOrder.delivery_method === "shipping" && (
+              <>
+                <div className="border-t pt-3 mt-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-3">Versandadresse</p>
+                  <div className="grid gap-3">
+                    <Input value={newOrder.shipping_name} onChange={e => setNewOrder(p => ({ ...p, shipping_name: e.target.value }))} placeholder="Empfänger-Name" />
+                    <Input value={newOrder.shipping_address_line1} onChange={e => setNewOrder(p => ({ ...p, shipping_address_line1: e.target.value }))} placeholder="Strasse & Nr." />
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input value={newOrder.shipping_postal_code} onChange={e => setNewOrder(p => ({ ...p, shipping_postal_code: e.target.value }))} placeholder="PLZ" />
+                      <Input className="col-span-2" value={newOrder.shipping_city} onChange={e => setNewOrder(p => ({ ...p, shipping_city: e.target.value }))} placeholder="Ort" />
+                    </div>
+                    <Input value={newOrder.shipping_country} onChange={e => setNewOrder(p => ({ ...p, shipping_country: e.target.value }))} placeholder="Land" />
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="space-y-1.5">
+              <Label>Notizen</Label>
+              <Textarea value={newOrder.notes} onChange={e => setNewOrder(p => ({ ...p, notes: e.target.value }))} placeholder="Optionale Notizen..." rows={2} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Abbrechen</Button>
+            <Button onClick={handleCreateOrder}>Bestellung erstellen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
