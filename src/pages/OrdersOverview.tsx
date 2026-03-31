@@ -158,6 +158,24 @@ const OrdersOverview = () => {
   const [importingSpreadsheet, setImportingSpreadsheet] = useState(false);
   const [importingStripe, setImportingStripe] = useState(false);
   const [activeTab, setActiveTab] = useState("orders");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newOrder, setNewOrder] = useState({
+    customer_name: "",
+    customer_email: "",
+    phone_model: "",
+    quantity: 1,
+    amount_total: 0,
+    currency: "chf",
+    delivery_method: "shipping",
+    payment_method: "stripe",
+    order_status: "paid",
+    shipping_name: "",
+    shipping_address_line1: "",
+    shipping_city: "",
+    shipping_postal_code: "",
+    shipping_country: "CH",
+    notes: "",
+  });
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["external-orders"],
     queryFn: async () => {
